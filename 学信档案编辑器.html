@@ -7805,17 +7805,15 @@ document.addEventListener('DOMContentLoaded',function(){
       if(bar) bar.style.display = 'none';
       if(spacer && spacer.offsetHeight <= 90) spacer.style.display = 'none';
 
-      // 注入临时样式修复背景和 footer 截图问题
+      // 注入临时样式修复背景色（不改变布局结构）
       var fixStyle = document.createElement('style');
       fixStyle.id = 'export-bg-fix';
-      fixStyle.textContent = '.border-shadow,.sub_nav,#nav-second{background-color:#fefefe!important}html,body{height:auto!important;min-height:100%!important}';
+      fixStyle.textContent = '.border-shadow,.sub_nav,#nav-second{background-color:#fefefe!important}';
       document.head.appendChild(fixStyle);
 
       try {
         var body = document.body;
         var htmlEl = document.documentElement;
-        // 强制刷新布局以反映 height:auto 的变更
-        body.offsetHeight;
         var totalW = Math.max(body.scrollWidth, body.offsetWidth, htmlEl.clientWidth, htmlEl.scrollWidth, htmlEl.offsetWidth);
         var totalH = Math.max(body.scrollHeight, body.offsetHeight, htmlEl.clientHeight, htmlEl.scrollHeight, htmlEl.offsetHeight);
 
