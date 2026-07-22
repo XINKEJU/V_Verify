@@ -7812,18 +7812,29 @@ document.addEventListener('DOMContentLoaded',function(){
       document.head.appendChild(fixStyle);
 
       try {
-        // 临时约束 body 宽度为内容宽度，消除右侧空白（不移动任何DOM元素）
+        // 临时约束页面宽度为内容宽度，消除右侧空白（不移动任何DOM元素）
+        // 注意：Safari/WebKit(即.app的WKWebView运行环境)对宽度约束的重排时机与Chrome不同，
+        // 必须同时约束 html+body 并跨帧等待重排完成，否则 scrollWidth 仍返回旧的视口宽度。
         var body = document.body;
         var htmlEl = document.documentElement;
+        var CONTENT_W = 1200; // .main(1180) + 左右余量
         var origBodyWidth = body.style.width;
         var origBodyOverflow = body.style.overflow;
-        body.style.width = '1200px';
+        var origBodyMargin = body.style.margin;
+        var origHtmlWidth = htmlEl.style.width;
+        var origHtmlOverflow = htmlEl.style.overflow;
+        htmlEl.style.width = CONTENT_W + 'px';
+        htmlEl.style.overflow = 'hidden';
+        body.style.width = CONTENT_W + 'px';
+        body.style.margin = '0 auto';
         body.style.overflow = 'hidden';
 
-        // 强制重排后计算尺寸
-        void body.offsetHeight;
-        var totalW = body.scrollWidth;
-        var totalH = body.scrollHeight;
+        // Safari 需跨两帧才能完成宽度约束后的布局重排
+        await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
+
+        // 固定捕获宽度为 CONTENT_W（不依赖 scrollWidth，避免 Safari 返回旧视口宽度）
+        var totalW = CONTENT_W;
+        var totalH = Math.max(body.scrollHeight, body.offsetHeight, htmlEl.scrollHeight);
 
         // 优先用 html2canvas (canvas 路线，浏览器原生字体渲染，PUA 字符正常显示)
         // 失败时回退到 dom-to-image-more (SVG 路线，PUA 字符可能为方框)
@@ -7876,9 +7887,12 @@ document.addEventListener('DOMContentLoaded',function(){
         // 清理临时样式
         var fixStyleEl = document.getElementById('export-bg-fix');
         if(fixStyleEl) fixStyleEl.remove();
-        // 恢复 body 原始宽度和溢出
+        // 恢复 html/body 原始宽度、外边距和溢出
         body.style.width = origBodyWidth;
         body.style.overflow = origBodyOverflow;
+        body.style.margin = origBodyMargin;
+        htmlEl.style.width = origHtmlWidth;
+        htmlEl.style.overflow = origHtmlOverflow;
         // 恢复工具栏显示
         if(bar) bar.style.display = barDisplay;
         if(spacer) spacer.style.display = spacerDisplay;
