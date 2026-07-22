@@ -7812,30 +7812,25 @@ document.addEventListener('DOMContentLoaded',function(){
       document.head.appendChild(fixStyle);
 
       try {
-        // 创建临时包裹容器，将 outer-layer 和 footer 纳入其中，避免 body 全宽导致右侧空白
-        var outerLayer = document.querySelector('.outer-layer');
-        var footerEl = document.querySelector('.footer');
-        var exportWrap = document.createElement('div');
-        exportWrap.id = 'export-wrap';
-        exportWrap.style.cssText = 'width:1200px;position:relative;background:#fff';
-        if(outerLayer) exportWrap.appendChild(outerLayer);
-        if(footerEl) {
-          footerEl.style.position = 'relative';
-          footerEl.style.marginBottom = '0';
-          exportWrap.appendChild(footerEl);
-        }
-        document.body.insertBefore(exportWrap, document.body.firstChild);
+        // 临时约束 body 宽度为内容宽度，消除右侧空白（不移动任何DOM元素）
+        var body = document.body;
+        var htmlEl = document.documentElement;
+        var origBodyWidth = body.style.width;
+        var origBodyOverflow = body.style.overflow;
+        body.style.width = '1200px';
+        body.style.overflow = 'hidden';
 
-        // 基于内容容器计算尺寸
-        var totalW = exportWrap.scrollWidth;
-        var totalH = exportWrap.scrollHeight;
+        // 强制重排后计算尺寸
+        void body.offsetHeight;
+        var totalW = body.scrollWidth;
+        var totalH = body.scrollHeight;
 
         // 优先用 html2canvas (canvas 路线，浏览器原生字体渲染，PUA 字符正常显示)
         // 失败时回退到 dom-to-image-more (SVG 路线，PUA 字符可能为方框)
         var dataUrl;
         try {
           if(typeof html2canvas === 'function') {
-            var canvas = await html2canvas(exportWrap, {
+            var canvas = await html2canvas(body, {
               scale: Math.max(1, window.devicePixelRatio || 1),
               useCORS: true,
               backgroundColor: '#ffffff',
@@ -7860,7 +7855,7 @@ document.addEventListener('DOMContentLoaded',function(){
             }
           });
           try {
-            dataUrl = await domtoimage.toPng(exportWrap, {
+            dataUrl = await domtoimage.toPng(body, {
               cacheBust: true, copyDefaultStyles: false,
               bgcolor: '#f1f1f1', quality: 1.0, scale: 1
             });
@@ -7881,15 +7876,9 @@ document.addEventListener('DOMContentLoaded',function(){
         // 清理临时样式
         var fixStyleEl = document.getElementById('export-bg-fix');
         if(fixStyleEl) fixStyleEl.remove();
-        // 恢复 DOM 结构：将 outer-layer 和 footer 移回 body，删除临时包裹
-        var wrap = document.getElementById('export-wrap');
-        if(wrap) {
-          while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
-          wrap.remove();
-          // 恢复 footer 原始样式
-          var foot = document.querySelector('.footer');
-          if(foot) { foot.style.position = ''; foot.style.marginBottom = ''; }
-        }
+        // 恢复 body 原始宽度和溢出
+        body.style.width = origBodyWidth;
+        body.style.overflow = origBodyOverflow;
         // 恢复工具栏显示
         if(bar) bar.style.display = barDisplay;
         if(spacer) spacer.style.display = spacerDisplay;
