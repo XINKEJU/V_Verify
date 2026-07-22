@@ -7812,17 +7812,30 @@ document.addEventListener('DOMContentLoaded',function(){
       document.head.appendChild(fixStyle);
 
       try {
-        var body = document.body;
-        var htmlEl = document.documentElement;
-        var totalW = Math.max(body.scrollWidth, body.offsetWidth, htmlEl.clientWidth, htmlEl.scrollWidth, htmlEl.offsetWidth);
-        var totalH = Math.max(body.scrollHeight, body.offsetHeight, htmlEl.clientHeight, htmlEl.scrollHeight, htmlEl.offsetHeight);
+        // 创建临时包裹容器，将 outer-layer 和 footer 纳入其中，避免 body 全宽导致右侧空白
+        var outerLayer = document.querySelector('.outer-layer');
+        var footerEl = document.querySelector('.footer');
+        var exportWrap = document.createElement('div');
+        exportWrap.id = 'export-wrap';
+        exportWrap.style.cssText = 'width:1200px;position:relative;background:#fff';
+        if(outerLayer) exportWrap.appendChild(outerLayer);
+        if(footerEl) {
+          footerEl.style.position = 'relative';
+          footerEl.style.marginBottom = '0';
+          exportWrap.appendChild(footerEl);
+        }
+        document.body.insertBefore(exportWrap, document.body.firstChild);
+
+        // 基于内容容器计算尺寸
+        var totalW = exportWrap.scrollWidth;
+        var totalH = exportWrap.scrollHeight;
 
         // 优先用 html2canvas (canvas 路线，浏览器原生字体渲染，PUA 字符正常显示)
         // 失败时回退到 dom-to-image-more (SVG 路线，PUA 字符可能为方框)
         var dataUrl;
         try {
           if(typeof html2canvas === 'function') {
-            var canvas = await html2canvas(body, {
+            var canvas = await html2canvas(exportWrap, {
               scale: Math.max(1, window.devicePixelRatio || 1),
               useCORS: true,
               backgroundColor: '#ffffff',
@@ -7847,7 +7860,7 @@ document.addEventListener('DOMContentLoaded',function(){
             }
           });
           try {
-            dataUrl = await domtoimage.toPng(body, {
+            dataUrl = await domtoimage.toPng(exportWrap, {
               cacheBust: true, copyDefaultStyles: false,
               bgcolor: '#f1f1f1', quality: 1.0, scale: 1
             });
@@ -7868,6 +7881,15 @@ document.addEventListener('DOMContentLoaded',function(){
         // 清理临时样式
         var fixStyleEl = document.getElementById('export-bg-fix');
         if(fixStyleEl) fixStyleEl.remove();
+        // 恢复 DOM 结构：将 outer-layer 和 footer 移回 body，删除临时包裹
+        var wrap = document.getElementById('export-wrap');
+        if(wrap) {
+          while(wrap.firstChild) document.body.appendChild(wrap.firstChild);
+          wrap.remove();
+          // 恢复 footer 原始样式
+          var foot = document.querySelector('.footer');
+          if(foot) { foot.style.position = ''; foot.style.marginBottom = ''; }
+        }
         // 恢复工具栏显示
         if(bar) bar.style.display = barDisplay;
         if(spacer) spacer.style.display = spacerDisplay;
