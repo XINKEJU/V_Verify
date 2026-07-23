@@ -302,6 +302,25 @@ public class MainActivity extends AppCompatActivity {
             "    }, {passive: true});\n" +
             "  });\n" +
             "\n" +
+            "  // === 6. 修复 footer 下方空白：禁用 sticky footer 拉伸 ===\n" +
+            "  (function fixFooterWhitespace(){\n" +
+            "    var style = document.createElement('style');\n" +
+            "    style.id = 'android-footer-fix';\n" +
+            "    style.textContent = '' +\n" +
+            "      'html, body { height: auto !important; min-height: auto !important; }' +\n" +
+            "      '.outer-layer { min-height: auto !important; margin-bottom: 0 !important; }' +\n" +
+            "      '.outer-layer .outer-layer-content { padding-bottom: 0 !important; }' +\n" +
+            "      '.footer { margin-top: 0 !important; position: static !important; }';\n" +
+            "    document.head.appendChild(style);\n" +
+            "\n" +
+            "    // 强制将 body 高度裁剪为实际内容高度，消除灰色背景延伸\n" +
+            "    var realHeight = document.documentElement.scrollHeight;\n" +
+            "    document.body.style.height = realHeight + 'px';\n" +
+            "    document.documentElement.style.height = 'auto';\n" +
+            "\n" +
+            "    console.log('[AndroidAdapter] Footer whitespace fixed, realHeight=' + realHeight);\n" +
+            "  })();\n" +
+            "\n" +
             "  console.log('[AndroidAdapter] Injected successfully');\n" +
             "})();\n";
         view.evaluateJavascript(js, null);
