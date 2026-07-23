@@ -1,4 +1,60 @@
-<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style>
+<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=1200, initial-scale=0.4, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no, email=no, address=no">
+<style>
+/* === Android 端专项优化（不改变布局，仅优化触控/渲染体验）=== */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* 编辑字段：安卓触摸选中优化 */
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-user-modify: read-write;
+  touch-action: text;
+  -webkit-tap-highlight-color: rgba(26, 86, 219, 0.15);
+}
+/* 按钮：防止安卓双击缩放 */
+button, .btn, input[type="button"], input[type="submit"], input[type="reset"], select {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 输入框：安卓键盘弹出优化 */
+input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  font-size: 16px; /* 防止 iOS/Android 自动缩放 */
+}
+/* 工具栏：安卓固定定位优化 */
+#wb-bar {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+/* 密码遮罩层：安卓全屏优化 */
+#pw-overlay {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+</style>
+<style>
 @charset "utf-8";
 
 .webuploader-container .webuploader-pick { position: relative; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); text-align: center; border-radius: 0px; overflow: hidden; padding: 0px 30px; background: rgb(37, 184, 135); }
@@ -32,7 +88,6 @@ a.lwcc-rk-btn { display: block; margin: 5px 10px 10px; }
     <meta name="keywords" content="学信档案，高等教育信息，学籍学历，图片校对">
     <meta name="description" content="“学信档案”是中国高等教育学生信息网（简称“学信网”）各类学生个人信息档案的总称，涉及全国高等教育学生信息数据库中各类学生的学籍、学历、招生录取、助学贷款等信息。">
     <meta http-equiv="x-dns-prefetch-control" content="on">
-    <meta name="format-detection" content="telephone=no, email=no">
     <!-- 目的是为了用户在使用谷歌系浏览器时 跳转到机器人模块后 可以读取完整referer -->
     <meta name="referrer" content="no-referrer-when-downgrade">
     <link rel="dns-prefetch" href="https://t1.chei.com.cn/?v=1531374966451">
@@ -7719,6 +7774,10 @@ document.getElementById('btn-autofill').onclick=function(){
 };
 
 var _origValues = {};
+// 安卓端检测
+var isAndroid = /android/i.test(navigator.userAgent);
+var isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
 document.addEventListener('DOMContentLoaded',function(){
   // 可编辑字段 (.xx-val 数据字段 + .mb-title 标题字段)
   var vals = document.querySelectorAll('.xx-val, .mb-title');
@@ -7728,6 +7787,32 @@ document.addEventListener('DOMContentLoaded',function(){
     // 移除 user-select: none 以允许选中文本
     el.style.userSelect = 'auto';
     el.style.webkitUserSelect = 'auto';
+
+    // === 安卓端触摸编辑优化 ===
+    // 安卓 WebView/Chrome 上 contenteditable 首次点击可能不弹出键盘
+    // 需要手动 focus + 选区定位
+    if(isAndroid || isMobile){
+      el.addEventListener('touchend', function(e){
+        // 防止双重触发（touchend + click）
+        if(e.target === el || el.contains(e.target)){
+          e.preventDefault();
+          // 延迟 focus 确保安卓键盘弹出
+          setTimeout(function(){
+            el.focus();
+            // 将光标放到点击位置或末尾
+            try {
+              var sel = window.getSelection();
+              var range = document.createRange();
+              range.selectNodeContents(el);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            } catch(err) {}
+          }, 50);
+        }
+      }, { passive: false });
+    }
+
     var label = el.previousElementSibling;
     var key = label ? label.textContent.trim() : el.className + '_' + i;
     _origValues[key] = el.innerHTML;
@@ -7740,12 +7825,21 @@ document.addEventListener('DOMContentLoaded',function(){
     img.style.cursor = 'pointer';
     img.onclick = function(){
       var inp = document.createElement('input');
-      inp.type = 'file'; inp.accept = 'image/*';
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      // 安卓端：必须将 input 添加到 DOM 才能触发文件选择器
+      inp.style.position = 'fixed';
+      inp.style.top = '-100px';
+      inp.style.opacity = '0';
+      document.body.appendChild(inp);
       inp.onchange = function(ev){
         var f = ev.target.files[0];
         if(f){ var r = new FileReader(); r.onload = function(e2){ img.src = e2.target.result; }; r.readAsDataURL(f); }
+        // 清理 DOM 中的 input
+        setTimeout(function(){ if(inp.parentNode) inp.parentNode.removeChild(inp); }, 100);
       };
-      inp.click();
+      // 安卓端需要延迟点击
+      setTimeout(function(){ inp.click(); }, 50);
     };
   });
   
@@ -7842,7 +7936,7 @@ document.addEventListener('DOMContentLoaded',function(){
         try {
           if(typeof html2canvas === 'function') {
             var canvas = await html2canvas(body, {
-              scale: Math.max(1, window.devicePixelRatio || 1),
+              scale: isMobile ? Math.min(2, window.devicePixelRatio || 1) : Math.max(1, window.devicePixelRatio || 1),
               useCORS: true,
               backgroundColor: '#ffffff',
               logging: false,
@@ -7879,10 +7973,53 @@ document.addEventListener('DOMContentLoaded',function(){
         // 添加水印（自动从图片读取分辨率，保持高清）
         var watermarked = await addWatermark(dataUrl);
 
-        var a = document.createElement('a');
-        a.download = '学信档案_' + new Date().toISOString().slice(0,10) + '.png';
-        a.href = watermarked;
-        a.click();
+        // === 安卓端下载兼容 ===
+        // 安卓 WebView/Chrome 的 download 属性可能失效，需多级回退
+        var fileName = '学信档案_' + new Date().toISOString().slice(0,10) + '.png';
+        var downloadSuccess = false;
+
+        // 方案1：标准 a.download（Chrome/Firefox 桌面端 + Android Chrome）
+        try {
+          var a = document.createElement('a');
+          a.download = fileName;
+          a.href = watermarked;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); }, 200);
+          downloadSuccess = true;
+        } catch(e1) {
+          console.warn('标准下载失败，尝试回退方案:', e1);
+        }
+
+        // 方案2：Blob URL + window.open（安卓 WebView 回退）
+        if(!downloadSuccess || isAndroid){
+          try {
+            var byteStr = atob(watermarked.split(',')[1]);
+            var mimeStr = watermarked.split(',')[0].split(':')[1].split(';')[0];
+            var ab = new ArrayBuffer(byteStr.length);
+            var u8 = new Uint8Array(ab);
+            for(var bi=0; bi<byteStr.length; bi++) u8[bi] = byteStr.charCodeAt(bi);
+            var blob = new Blob([ab], { type: mimeStr });
+            var blobUrl = URL.createObjectURL(blob);
+
+            if(navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })){
+              // 方案3：Web Share API（安卓 Chrome 原生分享）
+              navigator.share({
+                files: [new File([blob], fileName, { type: 'image/png' })],
+                title: fileName
+              }).catch(function(){ /* 用户取消分享，忽略 */ });
+            } else {
+              // 方案2：新窗口打开
+              window.open(blobUrl, '_blank');
+            }
+            setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 10000);
+          } catch(e2) {
+            console.error('Blob 下载也失败:', e2);
+            // 方案4：最终回退 - 直接打开 dataURL
+            if(isAndroid) window.open(watermarked, '_blank');
+          }
+        }
       } finally {
         // 清理临时样式
         var fixStyleEl = document.getElementById('export-bg-fix');
@@ -7898,7 +8035,13 @@ document.addEventListener('DOMContentLoaded',function(){
         if(spacer) spacer.style.display = spacerDisplay;
       }
     } catch(e) {
-      alert('导出失败: ' + e.message + '\n\n如字体渲染异常，建议使用终端运行:\nnode 学信档案截图工具.js\n(Puppeteer 所见即所得，3x Retina)');
+      var errMsg = '导出失败: ' + e.message;
+      if(isMobile){
+        errMsg += '\n\n提示：安卓端如遇导出问题，请尝试使用 Chrome 浏览器打开页面后重试。';
+      } else {
+        errMsg += '\n\n如字体渲染异常，建议使用终端运行:\nnode 学信档案截图工具.js\n(Puppeteer 所见即所得，3x Retina)';
+      }
+      alert(errMsg);
       console.error(e);
     } finally {
       btn.textContent = origText;

@@ -119,7 +119,11 @@ func main() {
 		exec.Command("open", url).Start()
 	case "windows":
 		exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "android":
+		// Android: 使用 am start 打开默认浏览器
+		exec.Command("am", "start", "-a", "android.intent.action.VIEW", "-d", url).Start()
 	default:
+		// Linux 及其他平台
 		exec.Command("xdg-open", url).Start()
 	}
 
