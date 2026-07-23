@@ -1,5 +1,5 @@
 <!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta name="viewport" content="width=1200, initial-scale=0.4, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -7910,6 +7910,20 @@ document.addEventListener('DOMContentLoaded',function(){
         // 注意：Safari/WebKit(即.app的WKWebView运行环境)对宽度约束的重排时机与Chrome不同，
         // 必须同时约束 html+body 并跨帧等待重排完成，否则 scrollWidth 仍返回旧的视口宽度。
         var body = document.body;
+
+        // 安卓端：导出前临时移除 scale wrapper，避免 html2canvas 捕获到缩放
+        var androidWrapper = document.getElementById('android-scale-wrapper');
+        var androidWrapperTransform = '';
+        var androidWrapperWidth = '';
+        var androidBodyHeight = '';
+        if(androidWrapper){
+          androidWrapperTransform = androidWrapper.style.transform;
+          androidWrapperWidth = androidWrapper.style.width;
+          androidWrapper.style.transform = 'none';
+          androidWrapper.style.width = '1200px';
+          androidBodyHeight = body.style.height;
+          body.style.height = 'auto';
+        }
         var htmlEl = document.documentElement;
         var CONTENT_W = 1200; // .main(1180) + 左右余量
         var origBodyWidth = body.style.width;
@@ -8030,6 +8044,12 @@ document.addEventListener('DOMContentLoaded',function(){
         body.style.margin = origBodyMargin;
         htmlEl.style.width = origHtmlWidth;
         htmlEl.style.overflow = origHtmlOverflow;
+        // 恢复安卓 scale wrapper
+        if(androidWrapper){
+          androidWrapper.style.transform = androidWrapperTransform;
+          androidWrapper.style.width = androidWrapperWidth;
+          body.style.height = androidBodyHeight;
+        }
         // 恢复工具栏显示
         if(bar) bar.style.display = barDisplay;
         if(spacer) spacer.style.display = spacerDisplay;

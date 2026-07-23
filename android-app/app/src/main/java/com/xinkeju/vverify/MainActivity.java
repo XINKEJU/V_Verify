@@ -198,23 +198,105 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 注入安卓端适配脚本：
      * 1. 隐藏 Web 端固定工具栏（原生工具栏替代）
-     * 2. 将智能填写表单移动到模态弹窗（保留原始事件绑定）
-     * 3. 拦截下载，走原生通道
-     * 4. contenteditable 触摸优化
+     * 2. 等比缩放 1200px 布局到屏幕宽度（解决 initial-scale 模糊）
+     * 3. 移除 footer 下方空白
+     * 4. 将智能填写表单移动到模态弹窗（保留原始事件绑定）
+     * 5. 拦截下载，走原生通道
+     * 6. contenteditable 触摸优化
      */
     private void injectAndroidAdapter(WebView view) {
         String js = "(function(){\n" +
             "  if(window.__androidAdapterReady) return;\n" +
             "  window.__androidAdapterReady = true;\n" +
             "\n" +
+            "  var TARGET_W = 1200;\n" +
+            "  var screenW = window.innerWidth || document.documentElement.clientWidth || TARGET_W;\n" +
+            "  var scale = screenW / TARGET_W;\n" +
+            "\n" +
             "  // === 1. 隐藏 Web 端工具栏 ===\n" +
             "  var wbBar = document.getElementById('wb-bar');\n" +
             "  if(wbBar) wbBar.style.display = 'none';\n" +
-            "  // 移除工具栏占位 spacer div\n" +
             "  var spacers = document.querySelectorAll('div[style*=\"height:84px\"]');\n" +
             "  spacers.forEach(function(s){ s.style.height = '0px'; });\n" +
             "\n" +
-            "  // === 2. 创建智能填写模态弹窗 ===\n" +
+            "  // === 2. 创建 scale wrapper：保持 1200px 布局但按屏幕宽度等比缩放，解决 initial-scale 导致的模糊 ===\n" +
+            "  var wrapper = document.getElementById('android-scale-wrapper');\n" +
+            "  if(!wrapper){\n" +
+            "    wrapper = document.createElement('div');\n" +
+            "    wrapper.id = 'android-scale-wrapper';\n" +
+            "    wrapper.style.cssText = 'width:' + TARGET_W + 'px;transform-origin:top center;transform:scale(' + scale + ');position:relative;';\n" +
+            "    var children = Array.prototype.slice.call(document.body.childNodes);\n" +
+            "    children.forEach(function(node){\n" +
+            "      if(node.nodeType === 1 && /^(SCRIPT|STYLE|META|LINK|NOSCRIPT)$/.test(node.tagName)) return;\n" +
+            "      if(node.id === 'android-scale-wrapper' || node.id === 'android-smart-modal') return;\n" +
+            "      wrapper.appendChild(node);\n" +
+            "    });\n" +
+            "    document.body.appendChild(wrapper);\n" +
+            "  } else {\n" +
+            "    wrapper.style.transform = 'scale(' + scale + ')';\n" +
+            "  }\n" +
+            "\n" +
+            "  // body 样式调整\n" +
+            "  document.body.style.margin = '0';\n" +
+            "  document.body.style.padding = '0';\n" +
+            "  document.body.style.overflowX = 'hidden';\n" +
+            "  document.body.style.minHeight = 'auto';\n" +
+            "  document.body.style.background = '#f5f5f5';\n" +
+            "  document.documentElement.style.height = 'auto';\n" +
+            "  document.documentElement.style.minHeight = 'auto';\n" +
+            "\n" +
+            "  // === 3. 修复 footer 下方空白：禁用 sticky footer 拉伸 ===\n" +
+            "  var footerStyle = document.createElement('style');\n" +
+            "  footerStyle.id = 'android-footer-fix';\n" +
+            "  footerStyle.textContent = '' +\n" +
+            "    'html, body { height: auto !important; min-height: auto !important; }' +\n" +
+            "    '.outer-layer { min-height: auto !important; margin-bottom: 0 !important; }' +\n" +
+            "    '.outer-layer .outer-layer-content { padding-bottom: 0 !important; }' +\n" +
+            "    '.footer { margin-top: 0 !important; position: static !important; }' +\n" +
+            "    '#android-scale-wrapper { display: block !important; }';\n" +
+            "  document.head.appendChild(footerStyle);\n" +
+            "\n" +
+            "  // 裁剪 body 高度为 wrapper 缩放后的实际高度，彻底消除 footer 下方空白\n" +
+            "  function adjustBodyHeight(){\n" +
+            "    var h = wrapper.offsetHeight * scale;\n" +
+            "    document.body.style.height = h + 'px';\n" +
+            "    console.log('[AndroidAdapter] Body height adjusted to ' + h + ', scale=' + scale);\n" +
+            "  }\n" +
+            "\n" +
+            "  // 等待页面图片加载完成后再调整高度\n" +
+            "  function waitImagesAndAdjust(){\n" +
+            "    var imgs = document.images;\n" +
+            "    var pending = 0;\n" +
+            "    for(var i=0; i<imgs.length; i++){\n" +
+            "      if(!imgs[i].complete) pending++;\n" +
+            "    }\n" +
+            "    if(pending === 0){\n" +
+            "      setTimeout(adjustBodyHeight, 100);\n" +
+            "      return;\n" +
+            "    }\n" +
+            "    var done = 0;\n" +
+            "    var check = function(){\n" +
+            "      done++;\n" +
+            "      if(done >= pending) setTimeout(adjustBodyHeight, 100);\n" +
+            "    };\n" +
+            "    for(var j=0; j<imgs.length; j++){\n" +
+            "      if(!imgs[j].complete){\n" +
+            "        imgs[j].addEventListener('load', check);\n" +
+            "        imgs[j].addEventListener('error', check);\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "  waitImagesAndAdjust();\n" +
+            "\n" +
+            "  // 窗口大小变化时重新计算缩放\n" +
+            "  window.addEventListener('resize', function(){\n" +
+            "    screenW = window.innerWidth || document.documentElement.clientWidth || TARGET_W;\n" +
+            "    scale = screenW / TARGET_W;\n" +
+            "    wrapper.style.transform = 'scale(' + scale + ')';\n" +
+            "    waitImagesAndAdjust();\n" +
+            "  });\n" +
+            "\n" +
+            "  // === 4. 创建智能填写模态弹窗 ===\n" +
             "  var modal = document.createElement('div');\n" +
             "  modal.id = 'android-smart-modal';\n" +
             "  modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999999;background:rgba(0,0,0,0.7);overflow:auto;';\n" +
@@ -222,7 +304,6 @@ public class MainActivity extends AppCompatActivity {
             "  var panel = document.createElement('div');\n" +
             "  panel.style.cssText = 'position:relative;top:20px;margin:0 auto;width:1100px;max-width:95%;background:#fff;border-radius:12px;padding:24px 28px;box-shadow:0 8px 32px rgba(0,0,0,0.3);';\n" +
             "\n" +
-            "  // 标题栏\n" +
             "  var header = document.createElement('div');\n" +
             "  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #1a56db;';\n" +
             "  var title = document.createElement('span');\n" +
@@ -236,21 +317,17 @@ public class MainActivity extends AppCompatActivity {
             "  header.appendChild(closeBtn);\n" +
             "  panel.appendChild(header);\n" +
             "\n" +
-            "  // 将原始 wb-smart 表单移动到弹窗中（保留所有事件绑定）\n" +
             "  var origSmart = document.getElementById('wb-smart');\n" +
             "  if(origSmart){\n" +
             "    origSmart.style.cssText = 'display:flex;flex-direction:column;gap:18px;padding:8px 0;';\n" +
-            "    // 调整 label 样式使其在弹窗中更易操作\n" +
             "    origSmart.querySelectorAll('label').forEach(function(lb){\n" +
             "      lb.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:16px;color:#333;white-space:nowrap;';\n" +
             "    });\n" +
-            "    // 调整 input/select 样式\n" +
             "    origSmart.querySelectorAll('input, select').forEach(function(inp){\n" +
             "      inp.style.cssText = 'padding:10px 14px;border:1px solid #ccc;border-radius:6px;font-size:16px;background:#fff;color:#333;';\n" +
             "      if(inp.tagName === 'INPUT') inp.style.minWidth = '140px';\n" +
             "      if(inp.tagName === 'SELECT') inp.style.minWidth = '100px';\n" +
             "    });\n" +
-            "    // 调整按钮样式\n" +
             "    origSmart.querySelectorAll('button').forEach(function(btn){\n" +
             "      btn.style.cssText = 'padding:12px 28px;border:none;border-radius:6px;background:#ffd700;color:#1a56db;font-weight:700;font-size:17px;cursor:pointer;touch-action:manipulation;margin-top:8px;align-self:flex-start;';\n" +
             "    });\n" +
@@ -258,13 +335,12 @@ public class MainActivity extends AppCompatActivity {
             "  }\n" +
             "\n" +
             "  modal.appendChild(panel);\n" +
-            "  // 点击遮罩关闭\n" +
             "  modal.addEventListener('click', function(e){\n" +
             "    if(e.target === modal) modal.style.display = 'none';\n" +
             "  });\n" +
             "  document.body.appendChild(modal);\n" +
             "\n" +
-            "  // === 3. AndroidBridge 接口 ===\n" +
+            "  // === 5. AndroidBridge 接口 ===\n" +
             "  window.AndroidBridge = {\n" +
             "    toggleSmartFill: function(){\n" +
             "      var m = document.getElementById('android-smart-modal');\n" +
@@ -282,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
             "    }\n" +
             "  };\n" +
             "\n" +
-            "  // === 4. 拦截下载，走原生通道 ===\n" +
+            "  // === 6. 拦截下载，走原生通道 ===\n" +
             "  document.addEventListener('click', function(e){\n" +
             "    var a = e.target.closest('a');\n" +
             "    if(a && a.download && a.href){\n" +
@@ -295,33 +371,14 @@ public class MainActivity extends AppCompatActivity {
             "    }\n" +
             "  }, true);\n" +
             "\n" +
-            "  // === 5. contenteditable 触摸优化 ===\n" +
+            "  // === 7. contenteditable 触摸优化 ===\n" +
             "  document.querySelectorAll('[contenteditable]').forEach(function(el){\n" +
             "    el.addEventListener('touchstart', function(){\n" +
             "      this.focus();\n" +
             "    }, {passive: true});\n" +
             "  });\n" +
             "\n" +
-            "  // === 6. 修复 footer 下方空白：禁用 sticky footer 拉伸 ===\n" +
-            "  (function fixFooterWhitespace(){\n" +
-            "    var style = document.createElement('style');\n" +
-            "    style.id = 'android-footer-fix';\n" +
-            "    style.textContent = '' +\n" +
-            "      'html, body { height: auto !important; min-height: auto !important; }' +\n" +
-            "      '.outer-layer { min-height: auto !important; margin-bottom: 0 !important; }' +\n" +
-            "      '.outer-layer .outer-layer-content { padding-bottom: 0 !important; }' +\n" +
-            "      '.footer { margin-top: 0 !important; position: static !important; }';\n" +
-            "    document.head.appendChild(style);\n" +
-            "\n" +
-            "    // 强制将 body 高度裁剪为实际内容高度，消除灰色背景延伸\n" +
-            "    var realHeight = document.documentElement.scrollHeight;\n" +
-            "    document.body.style.height = realHeight + 'px';\n" +
-            "    document.documentElement.style.height = 'auto';\n" +
-            "\n" +
-            "    console.log('[AndroidAdapter] Footer whitespace fixed, realHeight=' + realHeight);\n" +
-            "  })();\n" +
-            "\n" +
-            "  console.log('[AndroidAdapter] Injected successfully');\n" +
+            "  console.log('[AndroidAdapter] Injected successfully, scale=' + scale);\n" +
             "})();\n";
         view.evaluateJavascript(js, null);
     }
