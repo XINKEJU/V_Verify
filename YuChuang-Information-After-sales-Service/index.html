@@ -104,6 +104,17 @@
     .uplace .tx{font-size:13px}
     .note{font-size:12px;color:var(--muted);padding:0 16px 14px;line-height:1.6}
 
+    /* ── 需求描述图片 ── */
+    .desc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px}
+    .dthumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fafbfc}
+    .dthumb img{width:100%;height:100%;object-fit:cover}
+    .dthumb .del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;
+      background:rgba(0,0,0,.5);color:#fff;font-size:14px;line-height:20px;text-align:center;cursor:pointer}
+    .dadd{border:1.5px dashed #d7dadf;border-radius:10px;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;color:var(--muted);cursor:pointer;background:#fafbfc;min-height:96px}
+    .dadd .ic{font-size:26px;margin-bottom:4px}
+    .dadd .tx{font-size:12px}
+
     /* ── 底部按钮 ── */
     .bar{display:flex;gap:10px;padding:14px 12px 26px}
     .bar button{flex:1}
@@ -223,6 +234,20 @@
         <div class="field txt"><label>需求描述</label><textarea v-model="form.description" maxlength="500" placeholder="例如：当前套餐、希望变更的内容等"></textarea></div>
         <div class="field" v-if="form.serviceType==='package_change'" @click="showPackagePicker=true">
           <label>目标套餐</label><span class="picker">{{ selectedPackageLabel || '请选择套餐' }}</span>
+        </div>
+        <div class="card">
+          <div class="chead"><i class="bar"></i><h3>上传相关截图（选填）</h3></div>
+          <p class="cdesc">可上传故障截图、页面提示等，便于我们快速定位问题</p>
+          <div class="desc">
+            <div v-for="(p,i) in descPreviews" :key="i" class="dthumb">
+              <img :src="p">
+              <span class="del" @click="removeDesc(i)">×</span>
+            </div>
+            <div v-if="descPreviews.length < MAX_DESC" class="dadd" @click="triggerDescUpload">
+              <div class="ic">＋</div><div class="tx">添加图片</div>
+            </div>
+          </div>
+          <input ref="uploadDesc" type="file" accept="image/*" multiple style="display:none" @change="handleDescChange">
         </div>
       </div>
       <div class="card">
@@ -352,6 +377,7 @@ createApp({
       };
       idFrontBlob.value = null; idBackBlob.value = null;
       idFrontPreview.value = ''; idBackPreview.value = '';
+      descBlobs.value = []; descPreviews.value = [];
       currentStep.value = 1;
     };
     watch(form, saveDraft, { deep: true });
@@ -366,6 +392,38 @@ createApp({
     const idBackBlob  = ref(null);
     const idFrontPreview = ref('');
     const idBackPreview  = ref('');
+
+    // ── 需求描述截图（选填，最多 4 张）──
+    const MAX_DESC = 4;
+    const uploadDesc   = ref(null);
+    const descBlobs   = ref([]);
+    const descPreviews = ref([]);
+    const triggerDescUpload = () => uploadDesc.value?.click();
+    const handleDescChange = async (event) => {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      vant.showLoadingToast({ message: '处理中...', forbidClick: true });
+      try {
+        for (const file of files) {
+          if (descBlobs.value.length >= MAX_DESC) {
+            vant.showToast({ message: `最多上传 ${MAX_DESC} 张截图`, icon: 'fail' });
+            break;
+          }
+          const blob = await compressImage(file);
+          descBlobs.value.push(blob);
+          descPreviews.value.push(URL.createObjectURL(blob));
+        }
+      } catch {
+        vant.showToast({ message: '图片处理失败', icon: 'fail' });
+      } finally {
+        vant.closeToast();
+      }
+      event.target.value = '';
+    };
+    const removeDesc = (i) => {
+      descBlobs.value.splice(i, 1);
+      descPreviews.value.splice(i, 1);
+    };
 
     // ── 静态数据 ──────────────────────────────────────
     const steps = ['选择服务', '个人信息', '需求描述', '上传证件'];
@@ -554,6 +612,17 @@ createApp({
           }
         }
 
+        // 1.5 上传需求描述截图（选填，非阻断，最多 4 张）
+        let descPaths = [];
+        try {
+          for (let i = 0; i < descBlobs.value.length; i++) {
+            descPaths.push(await uploadToStorage(ticketNo, descBlobs.value[i], `desc-${i+1}`));
+          }
+        } catch (upErr) {
+          console.warn('描述图片上传失败(非阻断):', upErr);
+          vant.showToast({ message: '部分截图上传失败，工单仍会提交', icon: 'fail', duration: 3500 });
+        }
+
         // 2. 写入工单：统一走 submit_ticket 存储过程（SECURITY DEFINER）
         const { error: dbErr } = await sb.rpc('submit_ticket', {
           p_ticket_no:    ticketNo,
@@ -567,6 +636,7 @@ createApp({
           p_email:        form.value.emailNotify ? form.value.email : null,
           p_front:        frontPath || null,
           p_back:         backPath || null,
+          p_desc_images:  descPaths.length ? descPaths : null,
           p_throttle:     true,
         });
         if (dbErr) throw dbErr;
@@ -618,6 +688,7 @@ createApp({
       };
       idFrontBlob.value = null; idBackBlob.value = null;
       idFrontPreview.value = ''; idBackPreview.value = '';
+      descBlobs.value = []; descPreviews.value = [];
       currentStep.value = 1;
       submitted.value = false;
       submittedTicketNo.value = '';
@@ -630,6 +701,7 @@ createApp({
       form, steps, serviceTypes, icons, packages, packageColumns,
       showPackagePicker,
       uploadFront, uploadBack, idFrontPreview, idBackPreview,
+      MAX_DESC, uploadDesc, descPreviews, triggerDescUpload, handleDescChange, removeDesc,
       serviceTypeLabel, selectedPackageLabel, maskedPhone, needsIdCard,
       goQuery, goAdmin,
       nextStep, prevStep, triggerUpload, handleFileChange,

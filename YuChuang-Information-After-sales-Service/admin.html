@@ -102,8 +102,12 @@
     .kv:last-child{border-bottom:none}
     .kv .k{width:70px;color:var(--muted);flex-shrink:0}
     .kv .v{color:#333;word-break:break-all;flex:1}
-    .idimgs{display:flex;gap:10px;margin-top:8px}
+    .idimgs{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
     .idimgs img{width:104px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+    .dwrap{position:relative;display:inline-block}
+    .dwrap img{width:104px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+    .dl{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;
+      font-size:11px;padding:2px 8px;border-radius:10px;text-decoration:none;line-height:1.5}
     .note-in{padding:0 15px 10px}
     .note-in input{width:100%;border:1px solid #e3e6ea;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;box-sizing:border-box}
     .update{display:flex;gap:10px;margin-top:12px;align-items:center}
@@ -265,8 +269,25 @@
           <div class="kv"><span class="k">创建时间</span><span class="v">{{ formatDate(t.created_at) }}</span></div>
           <div class="kv" v-if="t.completed_at"><span class="k">完成时间</span><span class="v">{{ formatDate(t.completed_at) }}</span></div>
           <div class="idimgs" v-if="detailUrls[t.ticket_no] && (detailUrls[t.ticket_no].front || detailUrls[t.ticket_no].back)">
-            <img v-if="detailUrls[t.ticket_no].front" :src="detailUrls[t.ticket_no].front" @click="preview(detailUrls[t.ticket_no].front)">
-            <img v-if="detailUrls[t.ticket_no].back" :src="detailUrls[t.ticket_no].back" @click="preview(detailUrls[t.ticket_no].back)">
+            <div class="dwrap" v-if="detailUrls[t.ticket_no].front">
+              <img :src="detailUrls[t.ticket_no].front" @click="preview(detailUrls[t.ticket_no].front)">
+              <a class="dl" @click.prevent="dlImg(detailUrls[t.ticket_no].front, t.ticket_no + '-人像面.jpg')">下载</a>
+            </div>
+            <div class="dwrap" v-if="detailUrls[t.ticket_no].back">
+              <img :src="detailUrls[t.ticket_no].back" @click="preview(detailUrls[t.ticket_no].back)">
+              <a class="dl" @click.prevent="dlImg(detailUrls[t.ticket_no].back, t.ticket_no + '-国徽面.jpg')">下载</a>
+            </div>
+          </div>
+          <div class="kv" v-if="detailUrls[t.ticket_no] && detailUrls[t.ticket_no].desc && detailUrls[t.ticket_no].desc.length">
+            <span class="k">描述截图</span>
+            <span class="v">
+              <span class="idimgs" style="margin-top:0">
+                <span class="dwrap" v-for="(u,i) in detailUrls[t.ticket_no].desc" :key="i">
+                  <img :src="u" @click="preview(u)">
+                  <a class="dl" @click.prevent="dlImg(u, t.ticket_no + '-截图' + (i+1) + '.jpg')">下载</a>
+                </span>
+              </span>
+            </span>
           </div>
           <div class="note-in">
             <input v-model="t._note" placeholder="处理备注（可选，将记入操作日志）">
@@ -498,13 +519,37 @@ createApp({
     const loadDetail = async (t) => {
       if (detailUrls[t.ticket_no]) return;
       try {
-        const sb = getSb(); const urls = { front: '', back: '' };
-        if (t.id_card_front_url) { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_front_url, 3600); if (data) urls.front = SUPABASE_URL + data.signedUrl; }
-        if (t.id_card_back_url)  { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_back_url, 3600);  if (data) urls.back = SUPABASE_URL + data.signedUrl; }
+        const sb = getSb();
+        const urls = { front: '', back: '', desc: [] };
+        // createSignedUrl 已返回完整绝对地址（含 token），无需再拼 SUPABASE_URL；
+        // 原代码拼接后 URL 重复、签名失效，导致图片无法显示。
+        if (t.id_card_front_url) { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_front_url, 3600); if (data?.signedUrl) urls.front = data.signedUrl; }
+        if (t.id_card_back_url)  { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_back_url, 3600);  if (data?.signedUrl) urls.back = data.signedUrl; }
+        const descArr = Array.isArray(t.desc_images) ? t.desc_images : [];
+        for (const p of descArr) {
+          if (!p) continue;
+          const { data } = await sb.storage.from('id-cards').createSignedUrl(p, 3600);
+          if (data?.signedUrl) urls.desc.push(data.signedUrl);
+        }
         detailUrls[t.ticket_no] = urls;
       } catch (e) { console.warn('签名失败:', e); }
     };
     const preview = (url) => { window.open(url, '_blank'); };
+    // 下载图片：fetch 签名 URL（connect-src 已放行 *.supabase.co）→ blob → 触发下载
+    const dlImg = async (url, filename) => {
+      try {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const obj = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = obj; a.download = filename || 'image.jpg';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(obj), 1500);
+      } catch (e) {
+        console.warn('下载失败，改为新标签打开:', e);
+        window.open(url, '_blank');
+      }
+    };
 
     const updateStatus = async (t) => {
       try {
@@ -539,7 +584,7 @@ createApp({
       activeTab, switchTab,
       ADMIN_SERVICE_TYPES,
       filters, STATUS_LIST, tickets, queried, loading, expanded, detailUrls,
-      hasMore, loadMore, doSearch, toggle, preview, updateStatus,
+      hasMore, loadMore, doSearch, toggle, preview, dlImg, updateStatus,
       PACKAGE_MAP, serviceLabel, statusInfo, formatDate,
       stats, kpis, donutSvg, barsSvg, trendSvg, statusColor, statusLabel, pct, STATUS_ORDER,
     };
