@@ -136,6 +136,16 @@
     .van-cell-group{border-radius:0!important}
     :root{--van-primary-color:var(--red);--van-button-primary-background:var(--red);--van-button-primary-border-color:var(--red)}
     .van-field__label{color:#555}
+
+    /* ── 响应式：桌面端自适应 ── */
+    @media (min-width:768px){
+      .app{max-width:780px}
+      .sgrid{grid-template-columns:repeat(3,1fr);gap:12px}
+      .ugrid{gap:16px}
+    }
+    @media (min-width:1100px){
+      .app{max-width:960px}
+    }
   </style>
 </head>
 <body>

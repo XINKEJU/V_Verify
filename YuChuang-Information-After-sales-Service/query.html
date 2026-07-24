@@ -81,6 +81,17 @@
     .van-cell-group{border-radius:0!important}
     :root{--van-primary-color:var(--red);--van-button-primary-background:var(--red);--van-button-primary-border-color:var(--red)}
     .van-field__label{color:#555}
+
+    /* ── 响应式：桌面端自适应 ── */
+    .tickets{display:grid;grid-template-columns:1fr;gap:12px}
+    .tickets .ticket{margin:0}
+    @media (min-width:768px){
+      .app{max-width:780px}
+    }
+    @media (min-width:1024px){
+      .app{max-width:960px}
+      .tickets{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
@@ -114,6 +125,7 @@
 
     <div v-else>
       <div class="count">共 {{ tickets.length }} 条工单记录</div>
+      <div class="tickets">
       <div class="ticket" v-for="t in tickets" :key="t.id">
         <div class="thead">
           <div>
@@ -147,6 +159,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>
