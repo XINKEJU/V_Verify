@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <title>校园网服务 · 管理后台</title>
+  <link rel="stylesheet" href="./vendor/vant.min.css">
+  <script src="./vendor/vue.global.prod.js"></script>
+  <script src="./vendor/vant.min.js"></script>
+  <script src="./vendor/supabase.min.js"></script>
+  <script src="./src/config.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #f5f7fa;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      min-height: 100vh; color: #1a1a1a;
+    }
+    .page-header {
+      background: linear-gradient(135deg, #2b3a55 0%, #16233b 100%);
+      padding: 24px 20px 20px; color: #fff; position: relative; overflow: hidden;
+    }
+    .page-header::before {
+      content: ''; position: absolute; right: -30px; top: -30px;
+      width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,.06);
+    }
+    .header-logo { width: 44px; height: 44px; background: rgba(255,255,255,.18); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
+    .header-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+    .header-sub { font-size: 13px; opacity: .8; margin: 0; }
+    .header-query {
+      position: absolute; top: 12px; right: 16px; font-size: 13px; color: rgba(255,255,255,.85);
+      cursor: pointer; padding: 6px 12px; background: rgba(255,255,255,.15); border-radius: 20px;
+    }
+    .header-query:active { background: rgba(255,255,255,.25); }
+
+    .card { margin: 14px 12px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .card-header { padding: 14px 16px 10px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; gap: 8px; }
+    .card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: #e8f3ff; }
+    .card-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+
+    .tabs { display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; }
+    .tab { flex: 1; text-align: center; padding: 14px 0; font-size: 15px; color: #888; cursor: pointer; position: relative; }
+    .tab.active { color: #1677ff; font-weight: 600; }
+    .tab.active::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: 40px; height: 3px; background: #1677ff; border-radius: 2px; }
+
+    .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
+    .service-item { border: 2px solid #f0f0f0; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; background: #fafafa; }
+    .service-item.selected { border-color: #1677ff; background: #e8f3ff; }
+    .service-icon { font-size: 26px; margin-bottom: 6px; }
+    .service-label { font-size: 13px; color: #333; line-height: 1.4; }
+    .service-item.selected .service-label { color: #1677ff; font-weight: 600; }
+
+    .upload-area { width: 100%; height: 150px; border: 2px dashed #d9d9d9; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fafafa; cursor: pointer; position: relative; overflow: hidden; }
+    .upload-area.has-file { border-color: #52c41a; border-style: solid; background: #f6ffed; }
+    .upload-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+    .upload-placeholder { text-align: center; pointer-events: none; }
+    .upload-placeholder .icon { font-size: 30px; margin-bottom: 6px; }
+    .upload-placeholder .text { font-size: 13px; color: #999; }
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
+    .upload-label { font-size: 13px; color: #555; margin-bottom: 8px; font-weight: 500; }
+
+    .btn-bar { padding: 16px 12px 28px; display: flex; gap: 10px; }
+    .btn-bar button { flex: 1; }
+
+    .custom-field { display: flex; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid #f0f0f0; min-height: 48px; }
+    .custom-field-label { width: 85px; flex-shrink: 0; font-size: 14px; color: #555; }
+    .custom-field-input { flex: 1; border: none; outline: none; font-size: 14px; color: #1a1a1a; background: transparent; padding: 0; }
+    .custom-field-input::placeholder { color: #c0c0c0; }
+    .custom-textarea { align-items: flex-start; }
+    .custom-textarea textarea { resize: vertical; min-height: 70px; padding-top: 4px; border: none; outline: none; flex: 1; font-size: 14px; font-family: inherit; }
+    .custom-field select { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; color: #1a1a1a; }
+
+    .van-cell-group { border-radius: 0 !important; }
+    :root { --van-primary-color: #1677ff; --van-button-primary-background: #1677ff; --van-button-primary-border-color: #1677ff; }
+    .van-field__label { color: #555; }
+
+    .filters { padding: 4px 0; }
+    .ticket-item { margin: 12px; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.05); overflow: hidden; }
+    .ticket-head { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .ticket-no { font-weight: 700; font-size: 14px; color: #1677ff; letter-spacing: .5px; }
+    .ticket-meta { font-size: 12px; color: #999; margin-top: 4px; }
+    .status-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; color: #fff; white-space: nowrap; }
+    .ticket-body { padding: 0 14px 14px; border-top: 1px solid #f5f5f5; }
+    .kv { display: flex; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed #f0f0f0; }
+    .kv:last-child { border-bottom: none; }
+    .kv .k { width: 78px; color: #999; flex-shrink: 0; }
+    .kv .v { flex: 1; color: #333; word-break: break-all; }
+    .id-imgs { display: flex; gap: 10px; margin-top: 8px; }
+    .id-imgs img { width: 110px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
+    .status-update-note { padding: 0 14px 10px; }
+    .status-update-note input { width: 100%; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px; font-size: 13px; outline: none; box-sizing: border-box; }
+    .status-update { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
+    .status-update select { flex: 1; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+    .empty { text-align: center; color: #999; padding: 50px 20px; font-size: 14px; }
+    .login-tip { font-size: 12px; color: #999; padding: 0 16px 14px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 登录 -->
+  <div v-if="!loggedIn" class="page-header">
+    <div class="header-logo">🔐</div>
+    <h1 class="header-title">管理后台登录</h1>
+    <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
+  </div>
+  <div v-if="!loggedIn" class="card">
+    <div class="card-header">
+      <div class="card-icon">🔑</div>
+      <span class="card-title">请输入管理员口令</span>
+    </div>
+      <van-cell-group>
+        <van-field v-model="loginPass" type="password" label="口令" placeholder="请输入管理员口令" @keyup.enter="doLogin" />
+      </van-cell-group>
+      <p v-if="loginErr" style="color:#f5222d;font-size:13px;padding:0 16px 8px;margin:0;">{{ loginErr }}</p>
+      <div class="btn-bar">
+        <van-button block type="primary" :loading="loginLoading" @click="doLogin">登录</van-button>
+      </div>
+      <p class="login-tip">口令以哈希形式存于数据库，前端不接触明文。如遗忘口令，请联系系统管理员在 Supabase Studio 重置 <code>site_config.admin_pass_hash</code>。</p>
+  </div>
+
+  <!-- 主界面 -->
+  <template v-else>
+    <div class="page-header">
+      <div class="header-logo">🛠️</div>
+      <h1 class="header-title">管理后台</h1>
+      <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
+      <div class="header-query" @click="goUser">↩ 用户端</div>
+      <div class="header-query" style="top:auto;bottom:12px;" @click="doLogout">退出</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab" :class="{active: activeTab==='new'}" @click="activeTab='new'">新建工单</div>
+      <div class="tab" :class="{active: activeTab==='manage'}" @click="activeTab='manage'">工单管理</div>
+    </div>
+
+    <!-- 新建工单 -->
+    <div v-show="activeTab==='new'">
+      <div class="card">
+        <div class="card-header"><div class="card-icon">📋</div><span class="card-title">选择服务类型</span></div>
+        <div class="service-grid">
+          <div v-for="s in serviceTypes" :key="s.value" class="service-item" :class="{selected: form.serviceType===s.value}" @click="form.serviceType=s.value">
+            <div class="service-icon">{{ s.icon }}</div>
+            <div class="service-label">{{ s.label }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-icon">👤</div><span class="card-title">用户信息</span></div>
+        <div class="custom-field"><span class="custom-field-label">手机号</span><input class="custom-field-input" v-model="form.phone" placeholder="请输入用户手机号" maxlength="11"></div>
+        <div class="custom-field"><span class="custom-field-label">姓名</span><input class="custom-field-input" v-model="form.name" placeholder="请输入姓名"></div>
+        <div class="custom-field"><span class="custom-field-label">身份证号</span><input class="custom-field-input" v-model="form.idCard" placeholder="选填"></div>
+        <div class="custom-field"><span class="custom-field-label">学号</span><input class="custom-field-input" v-model="form.studentNo" placeholder="选填"></div>
+        <div class="custom-field" v-if="form.serviceType==='package_change'">
+          <span class="custom-field-label">目标套餐</span>
+          <span class="custom-field-link" @click="showPackagePicker=true">{{ selectedPackageLabel || '请选择套餐' }}</span>
+        </div>
+        <div class="custom-field custom-textarea"><span class="custom-field-label">需求描述</span><textarea v-model="form.description" placeholder="请描述处理内容/结果"></textarea></div>
+      </div>
+
+      <div class="card" v-if="needsIdCard">
+        <div class="card-header"><div class="card-icon">🪪</div><span class="card-title">上传身份证照片（选填）</span></div>
+        <div class="upload-grid">
+          <div>
+            <div class="upload-label">正面</div>
+            <div class="upload-area" :class="{ 'has-file': idFrontPreview }" @click="triggerUpload('front')">
+              <img v-if="idFrontPreview" :src="idFrontPreview">
+              <div v-else class="upload-placeholder"><div class="icon">📷</div><div class="text">点击上传</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="upload-label">反面</div>
+            <div class="upload-area" :class="{ 'has-file': idBackPreview }" @click="triggerUpload('back')">
+              <img v-if="idBackPreview" :src="idBackPreview">
+              <div v-else class="upload-placeholder"><div class="icon">📷</div><div class="text">点击上传</div></div>
+            </div>
+          </div>
+        </div>
+        <input ref="uploadFront" type="file" accept="image/*" style="display:none" @change="handleFileChange($event,'front')">
+        <input ref="uploadBack" type="file" accept="image/*" style="display:none" @change="handleFileChange($event,'back')">
+      </div>
+
+      <div class="btn-bar">
+        <van-button block type="primary" :loading="submitting" @click="submitAdmin">创建工单</van-button>
+      </div>
+    </div>
+
+    <!-- 工单管理 -->
+    <div v-show="activeTab==='manage'">
+      <div class="card">
+        <div class="card-header"><div class="card-icon">🔎</div><span class="card-title">筛选工单</span></div>
+        <div class="filters">
+          <div class="custom-field"><span class="custom-field-label">手机号</span><input class="custom-field-input" v-model="filters.phone" placeholder="选填"></div>
+          <div class="custom-field"><span class="custom-field-label">工单号</span><input class="custom-field-input" v-model="filters.ticket_no" placeholder="选填"></div>
+          <div class="custom-field"><span class="custom-field-label">状态</span>
+            <select v-model="filters.status">
+              <option value="">全部</option>
+              <option v-for="s in STATUS_LIST" :key="s.value" :value="s.value">{{ s.label }}</option>
+            </select>
+          </div>
+          <div class="custom-field"><span class="custom-field-label">服务类型</span>
+            <select v-model="filters.service">
+              <option value="">全部</option>
+              <option v-for="s in ADMIN_SERVICE_TYPES" :key="s.value" :value="s.value">{{ s.label }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-bar" style="padding-top:6px;">
+          <van-button block type="primary" :loading="loading" @click="doSearch">查询</van-button>
+        </div>
+      </div>
+
+      <div v-if="tickets.length===0 && queried" class="empty">未查询到工单</div>
+      <div v-if="!queried" class="empty">请输入筛选条件后点击查询</div>
+
+      <div v-for="t in tickets" :key="t.ticket_no" class="ticket-item">
+        <div class="ticket-head" @click="toggle(t)">
+          <div>
+            <div class="ticket-no">{{ t.ticket_no }}</div>
+            <div class="ticket-meta">{{ serviceLabel(t.service_type) }} · {{ t.phone }} · {{ formatDate(t.created_at) }}</div>
+          </div>
+          <span class="status-badge" :style="{background: statusInfo(t.status).color}">{{ statusInfo(t.status).label }}</span>
+        </div>
+        <div v-if="expanded===t.ticket_no" class="ticket-body">
+          <div class="kv"><span class="k">姓名</span><span class="v">{{ t.name || '—' }}</span></div>
+          <div class="kv"><span class="k">身份证</span><span class="v">{{ t.id_card || '—' }}</span></div>
+          <div class="kv"><span class="k">学号</span><span class="v">{{ t.student_no || '—' }}</span></div>
+          <div class="kv"><span class="k">套餐</span><span class="v">{{ PACKAGE_MAP[t.package] || '—' }}</span></div>
+          <div class="kv"><span class="k">描述</span><span class="v">{{ t.description || '—' }}</span></div>
+          <div class="kv"><span class="k">邮箱</span><span class="v">{{ t.email || '—' }}</span></div>
+          <div class="kv"><span class="k">创建时间</span><span class="v">{{ formatDate(t.created_at) }}</span></div>
+          <div class="kv" v-if="t.completed_at"><span class="k">完成时间</span><span class="v">{{ formatDate(t.completed_at) }}</span></div>
+          <div class="id-imgs" v-if="detailUrls[t.ticket_no] && (detailUrls[t.ticket_no].front || detailUrls[t.ticket_no].back)">
+            <img v-if="detailUrls[t.ticket_no].front" :src="detailUrls[t.ticket_no].front" @click="preview(detailUrls[t.ticket_no].front)">
+            <img v-if="detailUrls[t.ticket_no].back" :src="detailUrls[t.ticket_no].back" @click="preview(detailUrls[t.ticket_no].back)">
+          </div>
+          <div class="status-update-note">
+            <input class="custom-field-input" v-model="t._note" placeholder="处理备注（可选，将记入操作日志）" />
+          </div>
+          <div class="status-update">
+            <select v-model="t._newStatus">
+              <option v-for="s in STATUS_LIST" :key="s.value" :value="s.value">{{ s.label }}</option>
+            </select>
+            <van-button size="small" type="primary" @click="updateStatus(t)">更新状态</van-button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="tickets.length > 0" style="padding:4px 12px 8px;text-align:center;font-size:12px;color:#999">
+        已加载 {{ tickets.length }} 条
+      </div>
+      <div v-if="hasMore" style="padding:0 12px 24px">
+        <van-button block plain round :loading="loading" @click="loadMore">加载更多</van-button>
+      </div>
+    </div>
+  </template>
+
+  <!-- 套餐选择弹窗 -->
+  <van-popup v-model:show="showPackagePicker" position="bottom" round>
+    <van-picker :columns="packageColumns" @confirm="onPackageConfirm" @cancel="showPackagePicker=false" title="选择套餐" />
+  </van-popup>
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+const ICONS = {
+  package_change: '📦', broadband_open: '🌐', broadband_close: '🔌',
+  query_account: '🔑', trouble_report: '🛠️', cancel_account: '❌',
+};
+const PACKAGE_MAP = {
+  basic: '基础套餐 20元/月', standard: '标准套餐 40元/月',
+  premium: '高级套餐 60元/月', addon: '叠加流量包 10元/10GB',
+};
+const ID_REQUIRED_TYPES = APP_CONFIG.ID_REQUIRED_TYPES || ['package_change', 'broadband_open', 'broadband_close', 'cancel_account'];
+
+createApp({
+  setup() {
+    const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = APP_CONFIG.SUPABASE_ANON_KEY;
+    const getSb = () => supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const token = ref(sessionStorage.getItem('admin_token') || '');
+    const loggedIn = computed(() => !!token.value);
+    const loginPass = ref('');
+    const loginErr = ref('');
+    const loginLoading = ref(false);
+
+    const activeTab = ref('new');
+
+    // ── 新建工单表单 ──
+    const form = reactive({ serviceType: '', phone: '', name: '', idCard: '', studentNo: '', description: '', package: '', email: '', emailNotify: false });
+    const serviceTypes = APP_CONFIG.ADMIN_SERVICE_TYPES.map(s => ({ ...s, icon: ICONS[s.value] || '📋' }));
+    const ADMIN_SERVICE_TYPES = APP_CONFIG.ADMIN_SERVICE_TYPES;
+    const packages = [
+      { value: 'basic', text: '基础套餐 20元/月' },
+      { value: 'standard', text: '标准套餐 40元/月' },
+      { value: 'premium', text: '高级套餐 60元/月' },
+      { value: 'addon', text: '叠加流量包 10元/10GB' },
+    ];
+    const packageColumns = packages.map(p => p.text);
+    const needsIdCard = computed(() => ID_REQUIRED_TYPES.includes(form.serviceType));
+    const selectedPackageLabel = computed(() => packages.find(p => p.value === form.package)?.text || '');
+    const showPackagePicker = ref(false);
+
+    const uploadFront = ref(null), uploadBack = ref(null);
+    const idFrontBlob = ref(null), idBackBlob = ref(null);
+    const idFrontPreview = ref(''), idBackPreview = ref('');
+    const submitting = ref(false);
+
+    // ── 工单管理 ──
+    const filters = reactive({ phone: '', ticket_no: '', status: '', service: '' });
+    const STATUS_LIST = Object.entries(APP_CONFIG.STATUS_MAP).map(([value, v]) => ({ value, label: v.label }));
+    const tickets = ref([]);
+    const queried = ref(false);
+    const loading = ref(false);
+    const expanded = ref(null);
+    const detailUrls = reactive({});
+    const PAGE_SIZE = 50;
+    const offset = ref(0);
+    const hasMore = ref(false);
+
+    // ── 登录 / 登出 ──
+    const doLogin = async () => {
+      loginLoading.value = true; loginErr.value = '';
+      try {
+        const sb = getSb();
+        const { data, error } = await sb.rpc('admin_login', { p_pass: loginPass.value });
+        if (error) throw error;
+        token.value = data;
+        sessionStorage.setItem('admin_token', data);
+      } catch (e) {
+        const msg = String(e?.message || '');
+        if (/account_locked/.test(msg)) loginErr.value = '账户已锁定，请稍后再试';
+        else if (/invalid_credentials/.test(msg)) loginErr.value = '口令错误，请重试';
+        else loginErr.value = '登录失败，请稍后重试';
+      } finally { loginLoading.value = false; }
+    };
+    const doLogout = async () => {
+      try { const sb = getSb(); await sb.rpc('admin_logout', { p_token: token.value }); } catch (e) {}
+      token.value = ''; sessionStorage.removeItem('admin_token');
+    };
+    const goUser = () => { window.location.href = './index.html'; };
+
+    // ── 图片处理 ──
+    const triggerUpload = (side) => { side === 'front' ? uploadFront.value?.click() : uploadBack.value?.click(); };
+    const compressImage = (file) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image(); img.src = e.target.result;
+        img.onload = () => {
+          const maxW = 1200, maxH = 800; let w = img.width, h = img.height;
+          if (w / h > maxW / maxH) { if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; } }
+          else { if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; } }
+          const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.82);
+        };
+      };
+    });
+    const handleFileChange = async (event, side) => {
+      const file = event.target.files[0]; if (!file) return;
+      const blob = await compressImage(file);
+      const url = URL.createObjectURL(blob);
+      if (side === 'front') { idFrontBlob.value = blob; idFrontPreview.value = url; }
+      else { idBackBlob.value = blob; idBackPreview.value = url; }
+      event.target.value = '';
+    };
+
+    const generateTicketNo = () => {
+      const d = new Date();
+      const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      const suffix = Date.now().toString(36).toUpperCase().slice(-6) + Math.floor(Math.random()*1000).toString().padStart(3,'0');
+      return `GY-${ymd}-${suffix}`;
+    };
+    const uploadToStorage = async (ticketNo, blob, side) => {
+      const sb = getSb();
+      const path = `${ticketNo}/${side}-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from('id-cards').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+      if (error) throw error;
+      return path;
+    };
+
+    // ── 创建工单（管理员，跳过频率限制，可代客提交）──
+    const submitAdmin = async () => {
+      if (!form.serviceType) return vant.showToast({ message: '请选择服务类型', icon: 'fail' });
+      if (!/^1[3-9]\d{9}$/.test(form.phone)) return vant.showToast({ message: '请输入正确手机号', icon: 'fail' });
+      if (!form.name.trim()) return vant.showToast({ message: '请输入姓名', icon: 'fail' });
+      submitting.value = true;
+      const ticketNo = generateTicketNo();
+      try {
+        const sb = getSb();
+        // 先传照片（如需），再写库，降低半失败概率
+        let f = '', b = '';
+        if (needsIdCard.value && (idFrontBlob.value || idBackBlob.value)) {
+          try {
+            if (idFrontBlob.value) f = await uploadToStorage(ticketNo, idFrontBlob.value, 'front');
+            if (idBackBlob.value)  b = await uploadToStorage(ticketNo, idBackBlob.value, 'back');
+          } catch (upErr) {
+            console.warn('身份证上传失败(非阻断):', upErr);
+            vant.showToast({ message: '身份证照片上传失败，工单仍会创建', icon: 'fail', duration: 3500 });
+          }
+        }
+        const payload = {
+          ticket_no: ticketNo, phone: form.phone, name: form.name,
+          id_card: form.idCard || null, student_no: form.studentNo || null,
+          service_type: form.serviceType, description: form.description,
+          package: form.serviceType === 'package_change' ? (form.package || null) : null,
+          id_card_front_url: f, id_card_back_url: b,
+          email: null, status: 'pending',
+        };
+        const { error } = await sb.from('tickets').insert([payload]);
+        if (error) throw error;
+        vant.showToast({ message: '工单已创建 ' + ticketNo, icon: 'success' });
+        resetAdmin();
+      } catch (err) {
+        vant.showToast({ message: '创建失败：' + (err.message || err), icon: 'fail' });
+      } finally { submitting.value = false; }
+    };
+    const resetAdmin = () => {
+      Object.assign(form, { serviceType: '', phone: '', name: '', idCard: '', studentNo: '', description: '', package: '', email: '', emailNotify: false });
+      idFrontBlob.value = null; idBackBlob.value = null; idFrontPreview.value = ''; idBackPreview.value = '';
+    };
+
+    const onPackageConfirm = ({ selectedOptions, selectedValues }) => {
+      const txt = selectedOptions?.[0]?.text ?? selectedValues?.[0];
+      const m = packages.find(p => p.text === txt);
+      if (m) form.package = m.value;
+      showPackagePicker.value = false;
+    };
+
+    // ── 查询全部工单（管理员，分页）──
+    const loadTickets = async (reset) => {
+      loading.value = true;
+      try {
+        const sb = getSb();
+        const { data, error } = await sb.rpc('get_all_tickets', {
+          p_token: token.value,
+          p_phone: filters.phone || null,
+          p_ticket_no: filters.ticket_no ? filters.ticket_no.toUpperCase() : null,
+          p_status: filters.status || null,
+          p_service: filters.service || null,
+          p_limit: PAGE_SIZE,
+          p_offset: reset ? 0 : offset.value,
+        });
+        if (error) throw error;
+        const rows = (data || []).map(t => ({ ...t, _newStatus: t.status, _note: '' }));
+        if (reset) {
+          tickets.value = rows;
+          offset.value = rows.length;
+        } else {
+          tickets.value = tickets.value.concat(rows);
+          offset.value += rows.length;
+        }
+        hasMore.value = rows.length === PAGE_SIZE;
+        queried.value = true;
+        expanded.value = null;
+      } catch (err) {
+        vant.showToast({ message: '查询失败：' + (err.message || err), icon: 'fail' });
+        if (/session_invalid|invalid_credentials/.test(String(err.message || ''))) { token.value = ''; sessionStorage.removeItem('admin_token'); }
+      } finally { loading.value = false; }
+    };
+    const doSearch = () => loadTickets(true);
+    const loadMore = () => loadTickets(false);
+
+    const toggle = (t) => {
+      if (expanded.value === t.ticket_no) { expanded.value = null; return; }
+      expanded.value = t.ticket_no;
+      loadDetail(t);
+    };
+    const loadDetail = async (t) => {
+      if (detailUrls[t.ticket_no]) return;
+      try {
+        const sb = getSb(); const urls = { front: '', back: '' };
+        if (t.id_card_front_url) { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_front_url, 3600); if (data) urls.front = SUPABASE_URL + data.signedUrl; }
+        if (t.id_card_back_url)  { const { data } = await sb.storage.from('id-cards').createSignedUrl(t.id_card_back_url, 3600);  if (data) urls.back = SUPABASE_URL + data.signedUrl; }
+        detailUrls[t.ticket_no] = urls;
+      } catch (e) { console.warn('签名失败:', e); }
+    };
+    const preview = (url) => { window.open(url, '_blank'); };
+
+    const updateStatus = async (t) => {
+      try {
+        const sb = getSb();
+        const { error } = await sb.rpc('admin_update_ticket', { p_token: token.value, p_ticket_no: t.ticket_no, p_status: t._newStatus, p_note: t._note || '' });
+        if (error) throw error;
+        t.status = t._newStatus;
+        t._note = '';
+        vant.showToast({ message: '状态已更新', icon: 'success' });
+      } catch (err) {
+        vant.showToast({ message: '更新失败：' + (err.message || err), icon: 'fail' });
+      }
+    };
+
+    // ── 格式化 ──
+    const serviceLabel = (type) => APP_CONFIG.SERVICE_TYPE_MAP[type] || type;
+    const statusInfo = (status) => APP_CONFIG.STATUS_MAP[status] || { label: status, color: '#8E8E93' };
+    const formatDate = (d) => {
+      if (!d) return '—';
+      const dt = new Date(d);
+      const p = (n) => String(n).padStart(2, '0');
+      return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} ${p(dt.getHours())}:${p(dt.getMinutes())}`;
+    };
+
+    onMounted(() => {
+      if (loggedIn.value) activeTab.value = 'manage';
+    });
+
+    return {
+      loggedIn, loginPass, loginErr, loginLoading, doLogin, doLogout, goUser,
+      activeTab, form, serviceTypes, ADMIN_SERVICE_TYPES, packages, packageColumns,
+      needsIdCard, selectedPackageLabel, showPackagePicker, onPackageConfirm,
+      uploadFront, uploadBack, idFrontPreview, idBackPreview, triggerUpload, handleFileChange,
+      submitting, submitAdmin,
+      filters, STATUS_LIST, tickets, queried, loading, expanded, detailUrls,
+      hasMore, loadMore, doSearch, toggle, preview, updateStatus,
+      PACKAGE_MAP, serviceLabel, statusInfo, formatDate,
+    };
+  },
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

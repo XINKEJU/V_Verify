@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <title>浙江海洋大学 · 校园网服务</title>
+  <link rel="stylesheet" href="./vendor/vant.min.css">
+  <script src="./vendor/vue.global.prod.js"></script>
+  <script src="./vendor/vant.min.js"></script>
+  <script src="./vendor/supabase.min.js"></script>
+  <script src="./src/config.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #f5f7fa;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── 顶部 Banner ── */
+    .page-header {
+      background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+      padding: 24px 20px 20px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      right: -30px; top: -30px;
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.08);
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      right: 40px; bottom: -60px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .header-logo {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.2);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .header-sub {
+      font-size: 13px;
+      opacity: .8;
+      margin: 0;
+    }
+    .header-query {
+      position: absolute; top: 12px; right: 16px;
+      font-size: 13px; color: rgba(255,255,255,.85);
+      cursor: pointer; padding: 6px 12px;
+      background: rgba(255,255,255,.15);
+      border-radius: 20px;
+      transition: background .2s;
+    }
+    .header-query:active { background: rgba(255,255,255,.25); }
+
+    /* ── 步骤条 ── */
+    .steps-bar {
+      background: #fff;
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .step-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      flex: 1;
+      position: relative;
+    }
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 14px; left: calc(50% + 16px);
+      right: calc(-50% + 16px);
+      height: 2px;
+      background: #e8e8e8;
+      z-index: 0;
+    }
+    .step-item.active:not(:last-child)::after,
+    .step-item.done:not(:last-child)::after {
+      background: #1677ff;
+    }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #e8e8e8;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600;
+      color: #999;
+      z-index: 1;
+      transition: all .3s;
+    }
+    .step-item.active .step-dot {
+      background: #1677ff;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(22,119,255,.4);
+    }
+    .step-item.done .step-dot {
+      background: #52c41a;
+      color: #fff;
+    }
+    .step-label {
+      font-size: 11px;
+      color: #bbb;
+      white-space: nowrap;
+    }
+    .step-item.active .step-label { color: #1677ff; font-weight: 600; }
+    .step-item.done  .step-label { color: #52c41a; }
+
+    /* ── 卡片 ── */
+    .card {
+      margin: 14px 12px;
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .card-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid #f5f5f5;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      background: #e8f3ff;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: #999;
+      margin: 0;
+      padding: 0 16px 8px;
+    }
+
+    /* ── 服务类型选项 ── */
+    .service-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px;
+    }
+    .service-item {
+      border: 2px solid #f0f0f0;
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .25s;
+      background: #fafafa;
+    }
+    .service-item:active { transform: scale(.97); }
+    .service-item.selected {
+      border-color: #1677ff;
+      background: #e8f3ff;
+    }
+    .service-icon { font-size: 26px; margin-bottom: 6px; }
+    .service-label {
+      font-size: 13px;
+      color: #333;
+      line-height: 1.4;
+    }
+    .service-item.selected .service-label { color: #1677ff; font-weight: 600; }
+
+    /* ── 上传区域 ── */
+    .upload-area {
+      width: 100%;
+      height: 160px;
+      border: 2px dashed #d9d9d9;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-area:active { border-color: #1677ff; background: #f0f7ff; }
+    .upload-area.has-file {
+      border-color: #52c41a;
+      border-style: solid;
+      background: #f6ffed;
+    }
+    .upload-area img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .upload-placeholder { text-align: center; pointer-events: none; }
+    .upload-placeholder .icon { font-size: 32px; margin-bottom: 6px; }
+    .upload-placeholder .text { font-size: 13px; color: #999; }
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
+    .upload-label { font-size: 13px; color: #555; margin-bottom: 8px; font-weight: 500; }
+
+    /* ── 底部按钮 ── */
+    .btn-bar {
+      padding: 16px 12px 32px;
+      display: flex; gap: 10px;
+    }
+    .btn-bar button { flex: 1; }
+
+    /* ── 草稿提示 ── */
+    .draft-banner {
+      margin: 12px 12px 0;
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; color: #ad6800;
+    }
+    .draft-clear { color: #1677ff; cursor: pointer; font-weight: 600; }
+
+    /* ── 邮箱通知 ── */
+    .email-notify-wrap {
+      padding: 10px 16px 14px;
+    }
+
+    /* ── 成功页 ── */
+    .success-page {
+      min-height: calc(100vh - 200px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .success-icon { font-size: 72px; margin-bottom: 16px; animation: pop .4s ease; }
+    @keyframes pop {
+      0%   { transform: scale(0); opacity: 0; }
+      80%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    .success-title { font-size: 22px; font-weight: 700; color: #1a1a1a; margin: 0 0 8px; }
+    .success-sub   { font-size: 14px; color: #666; margin: 0 0 24px; line-height: 1.6; }
+    .ticket-badge {
+      display: inline-block;
+      background: #e8f3ff;
+      color: #1677ff;
+      border-radius: 20px;
+      padding: 6px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 24px;
+    }
+
+    /* ── Vant 样式覆写 ── */
+    .van-cell-group { border-radius: 0 !important; }
+    :root {
+      --van-primary-color: #1677ff;
+      --van-button-primary-background: #1677ff;
+      --van-button-primary-border-color: #1677ff;
+    }
+    .van-field__label { color: #555; }
+
+    /* ── 自定义表单字段（替代van-field） ── */
+    .custom-field {
+      display: flex; align-items: center;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid #f0f0f0;
+      min-height: 48px;
+    }
+    .custom-field:last-child { border-bottom: none; }
+    .custom-field-label {
+      width: 85px; flex-shrink: 0;
+      font-size: 14px; color: #555;
+      text-align: left;
+    }
+    .custom-field-input {
+      flex: 1; border: none; outline: none;
+      font-size: 14px; color: #1a1a1a;
+      background: transparent;
+      padding: 0;
+    }
+    .custom-field-input::placeholder { color: #c0c0c0; }
+    .custom-textarea {
+      align-items: flex-start;
+    }
+    .custom-textarea textarea {
+      resize: vertical; min-height: 80px;
+      padding-top: 4px;
+    }
+    .custom-field-link {
+      color: #1677ff; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .custom-field-link::after {
+      content: '›'; font-size: 18px;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- 顶部 Banner -->
+  <div class="page-header">
+    <div class="header-logo">📡</div>
+    <h1 class="header-title">校园网服务申请</h1>
+    <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
+    <div class="header-query" @click="goQuery">🔍 查询工单</div>
+    <div class="header-query" style="top:auto;bottom:12px;" @click="goAdmin">🔐 管理员</div>
+  </div>
+
+  <!-- 成功页 -->
+  <div v-if="submitted" class="success-page">
+    <div class="success-icon">✅</div>
+    <h2 class="success-title">提交成功！</h2>
+    <p class="success-sub">您的服务申请已收到<br>我们将在 <strong>2小时内</strong> 处理，请保持手机畅通</p>
+    <div class="ticket-badge">{{ submittedTicketNo }}</div>
+    <p style="font-size:13px;color:#999;margin-bottom:20px;">截图保存工单号，可随时查询进度</p>
+    <van-button block type="primary" round @click="goQuery" style="margin-bottom:12px">
+      查询工单进度
+    </van-button>
+    <van-button block plain round @click="resetForm">
+      再次提交申请
+    </van-button>
+  </div>
+
+  <!-- 表单主体 -->
+  <div v-else>
+    <!-- 步骤条 -->
+    <div class="steps-bar">
+      <div
+        v-for="(s, i) in steps" :key="i"
+        :class="['step-item', currentStep === i+1 ? 'active' : (currentStep > i+1 ? 'done' : '')]"
+      >
+        <div class="step-dot">
+          <span v-if="currentStep > i+1">✓</span>
+          <span v-else>{{ i+1 }}</span>
+        </div>
+        <span class="step-label">{{ s }}</span>
+      </div>
+    </div>
+
+    <!-- 草稿恢复提示 -->
+    <div v-if="hasDraft && !submitted" class="draft-banner">
+      <span>📝 已为您恢复上次未提交的填写</span>
+      <span class="draft-clear" @click="discardDraft">重新填写</span>
+    </div>
+
+    <!-- ════ 步骤1：选择服务类型 ════ -->
+    <div v-if="currentStep === 1">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">🎯</div>
+          <span class="card-title">选择您的服务类型</span>
+        </div>
+        <div class="service-grid">
+          <div
+            v-for="svc in serviceTypes" :key="svc.value"
+            :class="['service-item', form.serviceType === svc.value ? 'selected' : '']"
+            @click="form.serviceType = svc.value"
+          >
+            <div class="service-icon">{{ svc.icon }}</div>
+            <div class="service-label">{{ svc.label }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 步骤2：个人信息 ════ -->
+    <div v-if="currentStep === 2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">👤</div>
+          <span class="card-title">填写个人信息</span>
+        </div>
+        <div class="custom-field">
+          <span class="custom-field-label">📱 手机号码</span>
+          <input class="custom-field-input" v-model="form.phone" type="tel" maxlength="11" placeholder="请输入您的手机号" />
+        </div>
+        <div class="custom-field">
+          <span class="custom-field-label">👤 真实姓名</span>
+          <input class="custom-field-input" v-model="form.name" placeholder="请输入您的真实姓名" />
+        </div>
+        <div class="custom-field">
+          <span class="custom-field-label">🪪 身份证号</span>
+          <input class="custom-field-input" v-model="form.idCard" maxlength="18" placeholder="请输入18位身份证号" />
+        </div>
+        <div class="custom-field">
+          <span class="custom-field-label">🎓 学号</span>
+          <input class="custom-field-input" v-model="form.studentNo" placeholder="请输入您的学号" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 步骤3：需求详情 ════ -->
+    <div v-if="currentStep === 3">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">📝</div>
+          <span class="card-title">描述您的需求</span>
+        </div>
+        <div class="custom-field custom-textarea">
+          <span class="custom-field-label">需求描述</span>
+          <textarea class="custom-field-input" v-model="form.description" placeholder="请详细描述您的需求，例如：目前套餐、希望变更内容等" rows="4" maxlength="500"></textarea>
+        </div>
+        <div class="custom-field" v-if="form.serviceType === 'package_change'">
+          <span class="custom-field-label">目标套餐</span>
+          <span class="custom-field-link" @click="showPackagePicker = true">
+            {{ selectedPackageLabel || '请选择您想要的套餐' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- 邮箱通知 -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">📬</div>
+          <span class="card-title">进度通知方式</span>
+        </div>
+        <div class="email-notify-wrap">
+          <van-checkbox v-model="form.emailNotify" shape="square" icon-size="18px">
+            通过邮箱接收处理进度通知
+          </van-checkbox>
+          <div v-if="form.emailNotify" style="margin-top:12px">
+            <div class="custom-field" style="border-radius:8px;border:1px solid #ebedf0;">
+              <span class="custom-field-label">📧 邮箱</span>
+              <input class="custom-field-input" v-model="form.email" type="email" placeholder="请输入您的邮箱地址" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 步骤4：上传身份证 ════ -->
+    <div v-if="currentStep === 4">
+      <div class="card" v-if="needsIdCard">
+        <div class="card-header">
+          <div class="card-icon">🪪</div>
+          <span class="card-title">上传身份证照片</span>
+        </div>
+        <p class="card-desc">请确保照片清晰、完整，不遮挡关键信息</p>
+        <div class="upload-grid">
+          <!-- 正面 -->
+          <div>
+            <div class="upload-label">身份证正面（人像面）</div>
+            <div :class="['upload-area', idFrontPreview ? 'has-file' : '']" @click="triggerUpload('front')">
+              <img v-if="idFrontPreview" :src="idFrontPreview" alt="身份证正面" />
+              <div v-else class="upload-placeholder">
+                <div class="icon">📷</div>
+                <div class="text">点击上传</div>
+              </div>
+            </div>
+            <input ref="uploadFront" type="file" accept="image/*" capture="environment"
+              style="display:none" @change="handleFileChange($event, 'front')" />
+          </div>
+          <!-- 反面 -->
+          <div>
+            <div class="upload-label">身份证反面（国徽面）</div>
+            <div :class="['upload-area', idBackPreview ? 'has-file' : '']" @click="triggerUpload('back')">
+              <img v-if="idBackPreview" :src="idBackPreview" alt="身份证反面" />
+              <div v-else class="upload-placeholder">
+                <div class="icon">📷</div>
+                <div class="text">点击上传</div>
+              </div>
+            </div>
+            <input ref="uploadBack" type="file" accept="image/*" capture="environment"
+              style="display:none" @change="handleFileChange($event, 'back')" />
+          </div>
+        </div>
+        <div style="padding:0 14px 14px;font-size:12px;color:#999">
+          📌 身份证照片仅用于身份核验，完成后自动加密存储，不作其他用途
+        </div>
+      </div>
+
+      <!-- 本服务类型无需身份证 -->
+      <div class="card" v-else style="margin-bottom:0">
+        <div class="card-header">
+          <div class="card-icon">✅</div>
+          <span class="card-title">无需上传证件</span>
+        </div>
+        <p class="card-desc">该服务类型无需身份核验，确认信息后直接提交即可</p>
+      </div>
+
+      <!-- 信息确认卡 -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header">
+          <div class="card-icon">✅</div>
+          <span class="card-title">提交信息确认</span>
+        </div>
+        <van-cell-group style="margin:0">
+          <van-cell title="服务类型" :value="serviceTypeLabel" />
+          <van-cell title="手机号码" :value="maskedPhone" />
+          <van-cell title="姓  名"  :value="form.name" />
+          <van-cell title="学  号"  :value="form.studentNo" />
+          <van-cell v-if="form.package" title="目标套餐" :value="selectedPackageLabel" />
+        </van-cell-group>
+      </div>
+    </div>
+
+    <!-- 套餐选择弹窗 -->
+    <van-popup v-model:show="showPackagePicker" position="bottom" round>
+      <van-picker
+        :columns="packageColumns"
+        @confirm="onPackageConfirm"
+        @cancel="showPackagePicker = false"
+        title="选择套餐"
+      />
+    </van-popup>
+
+    <!-- 底部按钮 -->
+    <div class="btn-bar">
+      <van-button
+        v-if="currentStep > 1"
+        type="default"
+        round
+        @click="prevStep"
+        style="flex: 0 0 90px"
+      >
+        上一步
+      </van-button>
+      <van-button
+        v-if="currentStep < 4"
+        block type="primary" round
+        @click="nextStep"
+      >
+        下一步
+      </van-button>
+      <van-button
+        v-if="currentStep === 4"
+        block type="primary" round
+        :loading="submitting"
+        loading-text="提交中..."
+        @click="submitForm"
+      >
+        确认提交申请
+      </van-button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, onMounted } = Vue;
+
+createApp({
+  setup() {
+    // ── 状态 ──────────────────────────────────────────
+    const currentStep = ref(1);
+    const submitting  = ref(false);
+    const submitted   = ref(false);
+    const submittedTicketNo = ref('');
+
+    // 草稿自动保存（防止误刷新/关闭导致填写丢失）
+    const DRAFT_KEY = 'gy_form_draft';
+    const hasDraft = ref(false);
+    const saveDraft = () => {
+      if (submitted.value) return;
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+          form: form.value, currentStep: currentStep.value,
+        }));
+      } catch (e) {}
+    };
+    const clearDraft = () => {
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+      hasDraft.value = false;
+    };
+    const loadDraft = () => {
+      try {
+        const raw = sessionStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (d && d.form) {
+          form.value = Object.assign(form.value, d.form);
+          if (typeof d.currentStep === 'number') currentStep.value = d.currentStep;
+          hasDraft.value = true;
+        }
+      } catch (e) {}
+    };
+    const discardDraft = () => {
+      clearDraft();
+      form.value = {
+        serviceType: '', phone: '', name: '', idCard: '',
+        studentNo: '', description: '', package: '', email: '', emailNotify: false,
+      };
+      idFrontBlob.value = null; idBackBlob.value = null;
+      idFrontPreview.value = ''; idBackPreview.value = '';
+      currentStep.value = 1;
+    };
+    watch(form, saveDraft, { deep: true });
+    watch(currentStep, saveDraft);
+    onMounted(loadDraft);
+
+    const showPackagePicker = ref(false);
+
+    const uploadFront = ref(null);
+    const uploadBack  = ref(null);
+    const idFrontBlob = ref(null);
+    const idBackBlob  = ref(null);
+    const idFrontPreview = ref('');
+    const idBackPreview  = ref('');
+
+    const form = ref({
+      serviceType: '',
+      phone: '',
+      name: '',
+      idCard: '',
+      studentNo: '',
+      description: '',
+      package: '',
+      email: '',
+      emailNotify: false,
+    });
+
+    // ── 静态数据 ──────────────────────────────────────
+    const steps = ['选择服务', '个人信息', '需求描述', '上传证件'];
+
+    const serviceTypes = [
+      { value: 'package_change',  icon: '📦', label: '套餐变更/叠加减免' },
+      { value: 'broadband_open',  icon: '🌐', label: '开通校园宽带' },
+      { value: 'broadband_close', icon: '🔌', label: '关闭校园宽带' },
+      { value: 'trouble_report',  icon: '🛠️', label: '宽带故障报修' },
+      { value: 'cancel_account',  icon: '❌', label: '账户销户申请' },
+    ];
+
+    const packages = [
+      { value: 'basic',    text: '基础套餐 20元/月' },
+      { value: 'standard', text: '标准套餐 40元/月' },
+      { value: 'premium',  text: '高级套餐 60元/月' },
+      { value: 'addon',    text: '叠加流量包 10元/10GB' },
+    ];
+    const packageColumns = packages.map(p => p.text);
+
+    // ── 计算属性 ──────────────────────────────────────
+    const serviceTypeLabel = computed(() =>
+      serviceTypes.find(s => s.value === form.value.serviceType)?.label || ''
+    );
+
+    const selectedPackageLabel = computed({
+      get: () => packages.find(p => p.value === form.value.package)?.text || '',
+      set: () => {},
+    });
+
+    const maskedPhone = computed(() => {
+      const p = form.value.phone;
+      return p.length === 11 ? `${p.slice(0,3)}****${p.slice(7)}` : p;
+    });
+
+    const needsIdCard = computed(() => ID_REQUIRED_TYPES.includes(form.value.serviceType));
+
+    // ── 步骤验证 ──────────────────────────────────────
+    const validateStep = () => {
+      const toast = (msg) => { vant.showToast({ message: msg, icon: 'fail' }); return false; };
+      switch (currentStep.value) {
+        case 1:
+          return form.value.serviceType ? true : toast('请选择服务类型');
+        case 2:
+          if (!/^1[3-9]\d{9}$/.test(form.value.phone)) return toast('请输入正确的手机号');
+          if (!form.value.name.trim()) return toast('请输入真实姓名');
+          if (!/^\d{17}[\dXx]$/.test(form.value.idCard)) return toast('请输入正确的身份证号');
+          if (!form.value.studentNo.trim()) return toast('请输入学号');
+          return true;
+        case 3:
+          if (!form.value.description.trim()) return toast('请填写需求描述');
+          if (form.value.serviceType === 'package_change' && !form.value.package) return toast('套餐变更请选择目标套餐');
+          if (form.value.emailNotify && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) return toast('请输入正确的邮箱地址');
+          return true;
+        case 4:
+          if (needsIdCard.value) {
+            if (!idFrontBlob.value) return toast('请上传身份证正面照片');
+            if (!idBackBlob.value)  return toast('请上传身份证反面照片');
+          }
+          return true;
+      }
+      return true;
+    };
+
+    const nextStep = () => {
+      if (validateStep()) {
+        currentStep.value++;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    const prevStep = () => {
+      currentStep.value--;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // ── 图片上传处理 ──────────────────────────────────
+    const triggerUpload = (side) => {
+      if (side === 'front') uploadFront.value?.click();
+      else uploadBack.value?.click();
+    };
+
+    const compressImage = (file) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          const maxW = 1200, maxH = 800;
+          let w = img.width, h = img.height;
+          if (w / h > maxW / maxH) {
+            if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+          } else {
+            if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.82);
+        };
+      };
+    });
+
+    const handleFileChange = async (event, side) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      vant.showLoadingToast({ message: '处理中...', forbidClick: true });
+      try {
+        const blob = await compressImage(file);
+        const previewUrl = URL.createObjectURL(blob);
+        if (side === 'front') {
+          idFrontBlob.value = blob;
+          idFrontPreview.value = previewUrl;
+        } else {
+          idBackBlob.value = blob;
+          idBackPreview.value = previewUrl;
+        }
+        vant.closeToast();
+      } catch {
+        vant.closeToast();
+        vant.showToast({ message: '图片处理失败', icon: 'fail' });
+      }
+      // 清空 input，允许重复选同一文件
+      event.target.value = '';
+    };
+
+    // ── 工单号生成（时间戳+随机，避免碰撞）────────────
+    const generateTicketNo = () => {
+      const d = new Date();
+      const yyyymmdd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+      const suffix = Date.now().toString(36).toUpperCase().slice(-6) + Math.floor(Math.random()*1000).toString().padStart(3,'0');
+      return `GY-${yyyymmdd}-${suffix}`;
+    };
+
+    // ── 需要上传身份证的服务类型（来自配置，故障报修免身份证）──
+    const ID_REQUIRED_TYPES = APP_CONFIG.ID_REQUIRED_TYPES || [
+      'package_change', 'broadband_open', 'broadband_close', 'cancel_account',
+    ];
+
+    // ── 直传身份证照片到 Storage（前端 anon 上传，绕开 Edge Function 依赖）──
+    const uploadToStorage = async (ticketNo, blob, side) => {
+      if (typeof supabase === 'undefined') throw new Error('Supabase SDK 未加载');
+      const sb = supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
+      const path = `${ticketNo}/${side}-${Date.now()}.jpg`;
+      const { error } = await sb.storage
+        .from('id-cards')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+      if (error) throw error;
+      return path;
+    };
+
+    // ── 提交 ─────────────────────────────────────────
+    const submitForm = async () => {
+      if (!validateStep()) return;
+      submitting.value = true;
+      const ticketNo = generateTicketNo();
+      try {
+        if (typeof supabase === 'undefined') throw new Error('Supabase SDK 未加载');
+        const sb = supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
+
+        // 0. 频率限制校验（防刷单）
+        const { data: allowed, error: rlErr } = await sb.rpc('check_submit_allowed', { p_phone: form.value.phone });
+        if (rlErr) console.warn('频率校验失败(跳过):', rlErr);
+        if (allowed === false) {
+          vant.showToast({ message: '操作过于频繁，请稍后再试', icon: 'fail', duration: 3000 });
+          return;
+        }
+
+        // 1. 先传身份证照片（如需），再写库，降低"工单建好但照片丢失"的半失败概率
+        let frontPath = '', backPath = '';
+        if (needsIdCard.value && (idFrontBlob.value || idBackBlob.value)) {
+          try {
+            if (idFrontBlob.value) frontPath = await uploadToStorage(ticketNo, idFrontBlob.value, 'front');
+            if (idBackBlob.value)  backPath  = await uploadToStorage(ticketNo, idBackBlob.value, 'back');
+          } catch (upErr) {
+            console.warn('身份证照片上传失败(非阻断):', upErr);
+            vant.showToast({ message: '身份证照片上传失败，工单仍会提交，管理员将联系您补充', icon: 'fail', duration: 3500 });
+          }
+        }
+
+        // 2. 写入工单（照片路径一并入库，少一次 RPC 往返）
+        const dbPayload = {
+          ticket_no:          ticketNo,
+          phone:              form.value.phone,
+          name:               form.value.name,
+          id_card:            form.value.idCard,
+          student_no:         form.value.studentNo,
+          service_type:       form.value.serviceType,
+          description:        form.value.description,
+          package:            form.value.package || null,
+          id_card_front_url:  frontPath,
+          id_card_back_url:   backPath,
+          email:              form.value.emailNotify ? form.value.email : null,
+          status:             'pending',
+        };
+
+        const { error: dbErr } = await sb.from('tickets').insert([dbPayload]);
+        if (dbErr) throw dbErr;
+
+        clearDraft();
+        submittedTicketNo.value = ticketNo;
+        submitted.value = true;
+        window.scrollTo(0, 0);
+      } catch (err) {
+        console.error('提交失败:', err);
+        let msg = '提交失败，请稍后重试';
+        if (err.message?.includes('Supabase SDK')) msg = '系统初始化失败，请刷新重试';
+        else if (err.message && /violates|row-level security|permission denied/i.test(err.message)) msg = '提交被拒绝，请联系管理员';
+        vant.showToast({ message: msg, icon: 'fail', duration: 3000 });
+      } finally {
+        submitting.value = false;
+      }
+    };
+
+    // ── 套餐确认 ──────────────────────────────────────
+    const onPackageConfirm = ({ selectedValues, selectedOptions }) => {
+      const idx = packageColumns.indexOf(selectedOptions[0]?.text ?? selectedValues[0]);
+      if (idx >= 0) form.value.package = packages[idx].value;
+      else {
+        // Vant4 picker 直接返回文本
+        const matched = packages.find(p => p.text === (selectedOptions[0]?.text ?? selectedValues[0]));
+        if (matched) form.value.package = matched.value;
+      }
+      showPackagePicker.value = false;
+    };
+
+    // ── 跳转查询页 ────────────────────────────────────
+    const goQuery = () => {
+      if (/^1[3-9]\d{9}$/.test(form.value.phone)) {
+        sessionStorage.setItem('query_phone', form.value.phone);
+      } else {
+        sessionStorage.removeItem('query_phone');
+      }
+      window.location.href = './query.html';
+    };
+
+    const goAdmin = () => {
+      window.location.href = './admin.html';
+    };
+
+    const resetForm = () => {
+      const keepPhone = form.value.phone;
+      clearDraft();
+      form.value = {
+        serviceType: '', phone: keepPhone, name: '', idCard: '',
+        studentNo: '', description: '', package: '', email: '', emailNotify: false,
+      };
+      idFrontBlob.value = null; idBackBlob.value = null;
+      idFrontPreview.value = ''; idBackPreview.value = '';
+      currentStep.value = 1;
+      submitted.value = false;
+      submittedTicketNo.value = '';
+      window.scrollTo(0, 0);
+    };
+
+    return {
+      currentStep, submitting, submitted, submittedTicketNo,
+      hasDraft, discardDraft,
+      form, steps, serviceTypes, packages, packageColumns,
+      showPackagePicker,
+      uploadFront, uploadBack, idFrontPreview, idBackPreview,
+      serviceTypeLabel, selectedPackageLabel, maskedPhone, needsIdCard,
+      goQuery, goAdmin,
+      nextStep, prevStep, triggerUpload, handleFileChange,
+      submitForm, onPackageConfirm, goQuery, resetForm, clearDraft,
+    };
+  },
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>

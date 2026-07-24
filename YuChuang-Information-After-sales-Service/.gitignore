@@ -1,0 +1,8 @@
+# 部署生成目录：由 scripts/sync-public.sh 从源码同步生成，请勿直接编辑或提交
+public/
+
+# 散落哈希命名的临时缓存文件
+*.txt
+
+# macOS 系统文件
+.DS_Store

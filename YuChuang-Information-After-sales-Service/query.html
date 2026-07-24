@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <title>工单查询 · 浙江海洋大学校园网</title>
+  <link rel="stylesheet" href="./vendor/vant.min.css">
+  <script src="./vendor/vue.global.prod.js"></script>
+  <script src="./vendor/vant.min.js"></script>
+  <script src="./vendor/supabase.min.js"></script>
+  <script src="./src/config.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f5f7fa;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
+      padding: 24px 20px 20px;
+      color: #fff;
+      position: relative; overflow: hidden;
+    }
+    .page-header::before {
+      content: ''; position: absolute;
+      right: -30px; top: -30px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.08);
+    }
+    .header-logo {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.2);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 10px;
+    }
+    .header-title  { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+    .header-sub    { font-size: 13px; opacity: .8; margin: 0; }
+
+    .search-card {
+      margin: 14px 12px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .search-title {
+      font-size: 15px; font-weight: 600;
+      color: #1a1a1a; margin-bottom: 12px;
+    }
+
+    /* 工单卡片 */
+    .ticket-card {
+      margin: 0 12px 12px;
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .ticket-header {
+      padding: 14px 16px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ticket-no {
+      font-size: 14px; font-weight: 700;
+      color: #333; letter-spacing: .5px;
+    }
+    .copy-btn {
+      display: inline-block; margin-left: 8px;
+      font-size: 11px; color: #722ed1; font-weight: 600;
+      border: 1px solid #efd9ff; background: #f9f0ff;
+      border-radius: 10px; padding: 1px 8px; cursor: pointer;
+      vertical-align: middle;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+    }
+    .ticket-body { padding: 0 16px 14px; }
+    .ticket-row {
+      display: flex; align-items: flex-start;
+      gap: 8px; margin-bottom: 8px;
+      font-size: 13px; color: #555;
+    }
+    .ticket-row .label { color: #999; white-space: nowrap; min-width: 60px; }
+    .ticket-row .value { color: #333; flex: 1; }
+    .ticket-divider { height: 1px; background: #f5f5f5; margin: 10px 0; }
+    .ticket-result {
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px; color: #389e0d;
+    }
+
+    /* 时间轴 */
+    .timeline-wrap { padding: 10px 16px 14px; }
+    .timeline-title { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; }
+    .timeline {
+      position: relative;
+      padding-left: 20px;
+    }
+    .timeline::before {
+      content: ''; position: absolute;
+      left: 6px; top: 8px; bottom: 0;
+      width: 2px; background: #e8e8e8;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .timeline-item::before {
+      content: ''; position: absolute;
+      left: -17px; top: 5px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #d9d9d9;
+    }
+    .timeline-item.active::before { background: #722ed1; box-shadow: 0 0 0 3px rgba(114,46,209,.2); }
+    .timeline-item.done::before   { background: #52c41a; }
+    .timeline-time  { font-size: 11px; color: #bbb; margin-bottom: 2px; }
+    .timeline-event { font-size: 13px; color: #333; }
+
+    .empty-state {
+      text-align: center; padding: 60px 24px;
+      color: #bbb; font-size: 14px;
+    }
+    .empty-state .emoji { font-size: 52px; margin-bottom: 12px; }
+
+    :root {
+      --van-primary-color: #722ed1;
+      --van-button-primary-background: #722ed1;
+      --van-button-primary-border-color: #722ed1;
+    }
+    .van-field__label { color: #555; }
+
+    /* ── 自定义输入框（替代van-field，避免Vant4 CDN渲染Bug）── */
+    .query-input {
+      display: flex; align-items: center;
+      padding: 10px 16px; min-height: 48px;
+      background: #fff;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .query-input:last-child { border-bottom: none; }
+    .query-input-label {
+      width: 72px; flex-shrink: 0;
+      font-size: 14px; color: #555;
+    }
+    .query-input-field {
+      flex: 1; border: none; outline: none;
+      font-size: 14px; color: #1a1a1a;
+      background: transparent; padding: 0;
+    }
+    .query-input-field::placeholder { color: #c0c0c0; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-logo">🔍</div>
+    <h1 class="header-title">工单进度查询</h1>
+    <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
+    <div class="header-query" @click="goAdmin">🔐 管理员</div>
+  </div>
+
+  <!-- 搜索表单 -->
+  <div class="search-card">
+    <div class="search-title">输入查询信息</div>
+    <div style="border-radius:10px;overflow:hidden;border:1px solid #ebedf0">
+      <div class="query-input">
+        <span class="query-input-label">📱 手机号码</span>
+        <input class="query-input-field" v-model="queryPhone" type="tel" maxlength="11" placeholder="请输入您的手机号" />
+      </div>
+      <div class="query-input">
+        <span class="query-input-label">📋 工单号</span>
+        <input class="query-input-field" v-model="queryTicketNo" placeholder="可选，如 GY-20260101-0001" />
+      </div>
+    </div>
+    <van-button
+      block type="primary" round
+      :loading="loading"
+      loading-text="查询中..."
+      @click="doQuery"
+      style="margin-top:14px"
+    >
+      查询工单
+    </van-button>
+  </div>
+
+  <!-- 查询结果 -->
+  <div v-if="queried">
+    <!-- 无结果 -->
+    <div v-if="tickets.length === 0" class="empty-state">
+      <div class="emoji">📭</div>
+      <div>未找到相关工单</div>
+      <div style="font-size:12px;margin-top:6px;color:#ccc">请确认手机号或工单号是否正确</div>
+    </div>
+
+    <!-- 工单列表 -->
+    <div v-else>
+      <div style="padding:4px 12px 10px;font-size:13px;color:#999">
+        共找到 {{ tickets.length }} 条工单记录
+      </div>
+      <div class="ticket-card" v-for="t in tickets" :key="t.id">
+        <!-- 卡片头 -->
+        <div class="ticket-header">
+          <div>
+            <span class="ticket-no">{{ t.ticket_no }}</span>
+            <span class="copy-btn" @click="copyNo(t.ticket_no)">复制</span>
+          </div>
+          <span
+            class="status-badge"
+            :style="{
+              background: statusInfo(t.status).bg,
+              color: statusInfo(t.status).color,
+            }"
+          >
+            {{ statusInfo(t.status).icon }} {{ statusInfo(t.status).label }}
+          </span>
+        </div>
+
+        <!-- 信息行 -->
+        <div class="ticket-body">
+          <div class="ticket-row">
+            <span class="label">服务类型</span>
+            <span class="value">{{ serviceLabel(t.service_type) }}</span>
+          </div>
+          <div class="ticket-row">
+            <span class="label">需求描述</span>
+            <span class="value">{{ t.description || '—' }}</span>
+          </div>
+          <div v-if="t.package" class="ticket-row">
+            <span class="label">目标套餐</span>
+            <span class="value">{{ PACKAGE_MAP[t.package] || t.package }}</span>
+          </div>
+          <div class="ticket-row">
+            <span class="label">提交时间</span>
+            <span class="value">{{ formatDate(t.created_at) }}</span>
+          </div>
+          <div v-if="t.completed_at" class="ticket-row">
+            <span class="label">完成时间</span>
+            <span class="value">{{ formatDate(t.completed_at) }}</span>
+          </div>
+
+          <!-- 处理结果 -->
+          <div v-if="t.result" style="margin-top:10px">
+            <div class="ticket-result">
+              ✅ 处理结果：{{ t.result }}
+            </div>
+          </div>
+
+          <div class="ticket-divider" />
+
+          <!-- 时间轴进度 -->
+          <div class="timeline-wrap" style="padding-left:0;padding-right:0">
+            <div class="timeline-title">处理进度</div>
+            <div class="timeline">
+              <div
+                v-for="(node, i) in buildTimeline(t)" :key="i"
+                :class="['timeline-item', node.class]"
+              >
+                <div class="timeline-time">{{ node.time }}</div>
+                <div class="timeline-event">{{ node.event }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部操作 -->
+  <div style="padding:12px 12px 32px;display:flex;gap:10px">
+    <van-button block plain round @click="goBack">← 返回提交</van-button>
+    <van-button v-if="queried" block plain round type="primary" @click="doQuery">刷新</van-button>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const queryPhone    = ref('');
+    const queryTicketNo = ref('');
+    const loading = ref(false);
+    const queried = ref(false);
+    const tickets = ref([]);
+
+    // 从 sessionStorage 读取提交页传入的手机号（避免 URL 明文泄露）
+    onMounted(() => {
+      const sp = sessionStorage.getItem('query_phone');
+      if (sp) {
+        queryPhone.value = sp;
+        doQuery();
+      }
+    });
+
+    const doQuery = async () => {
+      if (!/^1[3-9]\d{9}$/.test(queryPhone.value)) {
+        vant.showToast({ message: '请输入正确的手机号', icon: 'fail' });
+        return;
+      }
+      loading.value = true;
+      try {
+        const sb = supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
+        // 走安全 RPC：仅返回本手机号工单，不暴露身份证等敏感字段
+        const { data, error } = await sb.rpc('get_my_tickets', { p_phone: queryPhone.value });
+        if (error) throw error;
+        tickets.value = data || [];
+        queried.value = true;
+      } catch (err) {
+        console.error(err);
+        vant.showToast({ message: '查询失败，请检查网络', icon: 'fail' });
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    // 状态信息映射
+    const statusInfo = (status) => {
+      const map = {
+        pending:    { label: '待处理', color: '#d46b08', bg: '#fff7e6', icon: '⏳' },
+        processing: { label: '处理中', color: '#0958d9', bg: '#e6f4ff', icon: '⚙️' },
+        dispatched: { label: '已派发联通', color: '#531dab', bg: '#f9f0ff', icon: '📨' },
+        completed:  { label: '已完成',  color: '#389e0d', bg: '#f6ffed', icon: '✅' },
+        closed:     { label: '已关闭',  color: '#8c8c8c', bg: '#f5f5f5', icon: '🔒' },
+      };
+      return map[status] || { label: status, color: '#666', bg: '#f5f5f5', icon: '❓' };
+    };
+
+    // 服务类型标签
+    const serviceLabel = (type) => APP_CONFIG.SERVICE_TYPE_MAP[type] || type;
+
+    // 套餐标签
+    const PACKAGE_MAP = {
+      basic:    '基础套餐 20元/月',
+      standard: '标准套餐 40元/月',
+      premium:  '高级套餐 60元/月',
+      addon:    '叠加流量包 10元/10GB',
+    };
+
+    // 日期格式化
+    const formatDate = (iso) => {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      });
+    };
+
+    // 构建时间轴（含 closed，避免状态未命中导致时间轴全灰）
+    const buildTimeline = (t) => {
+      const nodes = [];
+      const statusOrder = ['pending', 'processing', 'dispatched', 'completed', 'closed'];
+      const eventNames  = { pending: '提交申请', processing: '开始处理', dispatched: '已转交联通', completed: '处理完成', closed: '工单关闭' };
+
+      const currentIdx = statusOrder.indexOf(t.status);
+
+      statusOrder.forEach((s, i) => {
+        let cls = 'pending-node';
+        if (currentIdx >= 0) {
+          if (i < currentIdx) cls = 'done';
+          else if (i === currentIdx) cls = 'active';
+        }
+        let time = '—';
+        if (s === 'pending' && t.created_at) time = formatDate(t.created_at);
+        if ((s === 'completed' || s === 'closed') && t.completed_at) time = formatDate(t.completed_at);
+        nodes.push({ class: cls, time, event: eventNames[s] });
+      });
+
+      return nodes;
+    };
+
+    // 复制工单号
+    const copyNo = (no) => {
+      const done = () => vant.showToast({ message: '工单号已复制', icon: 'success' });
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(no).then(done).catch(() => fallbackCopy(no, done));
+      } else fallbackCopy(no, done);
+    };
+    const fallbackCopy = (text, done) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); done();
+      } catch (e) {
+        vant.showToast({ message: '复制失败，请手动长按', icon: 'fail' });
+      }
+    };
+
+    const goBack = () => {
+      window.location.href = './index.html';
+    };
+
+    const goAdmin = () => {
+      window.location.href = './admin.html';
+    };
+
+    return {
+      queryPhone, queryTicketNo, loading, queried, tickets,
+      doQuery, statusInfo, serviceLabel, PACKAGE_MAP, formatDate, buildTimeline, copyNo, goBack, goAdmin,
+    };
+  },
+}).use(vant).mount('#app');
+</script>
+</body>
+</html>
