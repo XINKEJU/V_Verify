@@ -6,177 +6,240 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://beacon.cdn.qq.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://*.alicdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; object-src 'none'; form-action 'self'">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="no-referrer">
-  <title>校园网服务 · 管理后台</title>
+  <title>管理后台 · 校园网服务</title>
   <link rel="stylesheet" href="./vendor/vant.min.css">
   <script src="./vendor/vue.global.prod.js"></script>
   <script src="./vendor/vant.min.js"></script>
   <script src="./vendor/supabase.min.js"></script>
   <script src="./src/config.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: #f5f7fa;
-      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
-      min-height: 100vh; color: #1a1a1a;
+    :root{
+      --red:#E60012;--red-d:#C1000E;--red-soft:#FDECEE;
+      --bg:#F3F4F6;--card:#fff;--text:#1A1A1A;--muted:#8A9099;--line:#EEF0F3;--r:16px;
     }
-    .page-header {
-      background: linear-gradient(135deg, #2b3a55 0%, #16233b 100%);
-      padding: 24px 20px 20px; color: #fff; position: relative; overflow: hidden;
-    }
-    .page-header::before {
-      content: ''; position: absolute; right: -30px; top: -30px;
-      width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,.06);
-    }
-    .header-logo { width: 44px; height: 44px; background: rgba(255,255,255,.18); border-radius: 12px;
-      display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px; }
-    .header-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-    .header-sub { font-size: 13px; opacity: .8; margin: 0; }
-    .header-query {
-      position: absolute; top: 12px; right: 16px; font-size: 13px; color: rgba(255,255,255,.85);
-      cursor: pointer; padding: 6px 12px; background: rgba(255,255,255,.15); border-radius: 20px;
-    }
-    .header-query:active { background: rgba(255,255,255,.25); }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;min-height:100vh}
+    .app{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;padding-bottom:8px}
 
-    .card { margin: 14px 12px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
-    .card-header { padding: 14px 16px 10px; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; gap: 8px; }
-    .card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: #e8f3ff; }
-    .card-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+    .topbar{background:var(--red);color:#fff;padding:20px 18px 16px;position:relative}
+    .brand{display:flex;align-items:center;gap:11px}
+    .logo{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.18);
+      display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;letter-spacing:-1px}
+    .brand-name{font-size:18px;font-weight:700;letter-spacing:.5px}
+    .brand-sub{font-size:12px;opacity:.88;margin-top:2px}
+    .topbar .links{position:absolute;top:16px;right:14px;display:flex;gap:8px}
+    .top-link{font-size:12px;color:#fff;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;cursor:pointer}
 
-    .tabs { display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; }
-    .tab { flex: 1; text-align: center; padding: 14px 0; font-size: 15px; color: #888; cursor: pointer; position: relative; }
-    .tab.active { color: #1677ff; font-weight: 600; }
-    .tab.active::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: 40px; height: 3px; background: #1677ff; border-radius: 2px; }
+    .card{margin:12px;background:var(--card);border-radius:var(--r);box-shadow:0 1px 3px rgba(20,20,40,.05);overflow:hidden}
+    .chead{padding:14px 16px 10px;display:flex;align-items:center;gap:8px}
+    .chead .bar{width:3px;height:15px;background:var(--red);border-radius:2px}
+    .chead h3{margin:0;font-size:15px;font-weight:700}
 
-    .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
-    .service-item { border: 2px solid #f0f0f0; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; background: #fafafa; }
-    .service-item.selected { border-color: #1677ff; background: #e8f3ff; }
-    .service-icon { font-size: 26px; margin-bottom: 6px; }
-    .service-label { font-size: 13px; color: #333; line-height: 1.4; }
-    .service-item.selected .service-label { color: #1677ff; font-weight: 600; }
+    .tabs{display:flex;background:#fff;border-bottom:1px solid var(--line)}
+    .tab{flex:1;text-align:center;padding:14px 0;font-size:14px;color:var(--muted);cursor:pointer;position:relative}
+    .tab.active{color:var(--red);font-weight:700}
+    .tab.active::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:36px;height:3px;background:var(--red);border-radius:2px}
 
-    .upload-area { width: 100%; height: 150px; border: 2px dashed #d9d9d9; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fafafa; cursor: pointer; position: relative; overflow: hidden; }
-    .upload-area.has-file { border-color: #52c41a; border-style: solid; background: #f6ffed; }
-    .upload-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-    .upload-placeholder { text-align: center; pointer-events: none; }
-    .upload-placeholder .icon { font-size: 30px; margin-bottom: 6px; }
-    .upload-placeholder .text { font-size: 13px; color: #999; }
-    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
-    .upload-label { font-size: 13px; color: #555; margin-bottom: 8px; font-weight: 500; }
+    .field{display:flex;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);min-height:52px}
+    .field:last-child{border-bottom:none}
+    .field label{width:78px;flex-shrink:0;font-size:14px;color:#555}
+    .field input,.field select{flex:1;border:none;outline:none;font-size:14px;color:var(--text);background:transparent;padding:0}
+    .field textarea{flex:1;border:none;outline:none;font-size:14px;background:transparent;resize:none;min-height:64px;padding-top:2px;font-family:inherit}
+    .picker{color:var(--red);font-size:14px;cursor:pointer}
 
-    .btn-bar { padding: 16px 12px 28px; display: flex; gap: 10px; }
-    .btn-bar button { flex: 1; }
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+    .sitem{border:1.5px solid var(--line);border-radius:12px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:#fff;transition:.2s}
+    .sico{width:42px;height:42px;border-radius:12px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center}
+    .sico svg{width:22px;height:22px}
+    .slabel{font-size:12.5px;color:#333;text-align:center;line-height:1.3}
+    .sitem.sel{border-color:var(--red);background:#FFF6F7}
+    .sitem.sel .slabel{color:var(--red);font-weight:600}
 
-    .custom-field { display: flex; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid #f0f0f0; min-height: 48px; }
-    .custom-field-label { width: 85px; flex-shrink: 0; font-size: 14px; color: #555; }
-    .custom-field-input { flex: 1; border: none; outline: none; font-size: 14px; color: #1a1a1a; background: transparent; padding: 0; }
-    .custom-field-input::placeholder { color: #c0c0c0; }
-    .custom-textarea { align-items: flex-start; }
-    .custom-textarea textarea { resize: vertical; min-height: 70px; padding-top: 4px; border: none; outline: none; flex: 1; font-size: 14px; font-family: inherit; }
-    .custom-field select { flex: 1; border: none; outline: none; font-size: 14px; background: transparent; color: #1a1a1a; }
+    .ugrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+    .ulabel{font-size:13px;color:#555;margin-bottom:8px;font-weight:500}
+    .uarea{height:140px;border:1.5px dashed #d7dadf;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fafbfc;cursor:pointer;overflow:hidden;position:relative}
+    .uarea.has{border-color:#1F9D55;border-style:solid;background:#f3fbf6}
+    .uarea img{width:100%;height:100%;object-fit:cover}
+    .uplace{text-align:center;color:var(--muted)}
+    .uplace .ic{font-size:26px;margin-bottom:5px}
 
-    .van-cell-group { border-radius: 0 !important; }
-    :root { --van-primary-color: #1677ff; --van-button-primary-background: #1677ff; --van-button-primary-border-color: #1677ff; }
-    .van-field__label { color: #555; }
+    .bar{display:flex;gap:10px;padding:14px 12px 26px}
+    .bar button{flex:1}
 
-    .filters { padding: 4px 0; }
-    .ticket-item { margin: 12px; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.05); overflow: hidden; }
-    .ticket-head { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-    .ticket-no { font-weight: 700; font-size: 14px; color: #1677ff; letter-spacing: .5px; }
-    .ticket-meta { font-size: 12px; color: #999; margin-top: 4px; }
-    .status-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; color: #fff; white-space: nowrap; }
-    .ticket-body { padding: 0 14px 14px; border-top: 1px solid #f5f5f5; }
-    .kv { display: flex; padding: 7px 0; font-size: 13px; border-bottom: 1px dashed #f0f0f0; }
-    .kv:last-child { border-bottom: none; }
-    .kv .k { width: 78px; color: #999; flex-shrink: 0; }
-    .kv .v { flex: 1; color: #333; word-break: break-all; }
-    .id-imgs { display: flex; gap: 10px; margin-top: 8px; }
-    .id-imgs img { width: 110px; height: 75px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
-    .status-update-note { padding: 0 14px 10px; }
-    .status-update-note input { width: 100%; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px; font-size: 13px; outline: none; box-sizing: border-box; }
-    .status-update { display: flex; gap: 10px; margin-top: 12px; align-items: center; }
-    .status-update select { flex: 1; padding: 8px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
-    .empty { text-align: center; color: #999; padding: 50px 20px; font-size: 14px; }
-    .login-tip { font-size: 12px; color: #999; padding: 0 16px 14px; line-height: 1.6; }
+    /* 登录 */
+    .login-card{margin:14px 12px}
+    .login-tip{font-size:12px;color:var(--muted);padding:0 16px 14px;line-height:1.6}
+
+    /* 看板 */
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px}
+    .kpi{background:#fff;border-radius:14px;padding:14px 6px;text-align:center;box-shadow:0 1px 3px rgba(20,20,40,.05)}
+    .kpi .n{font-size:21px;font-weight:800;line-height:1.1}
+    .kpi .l{font-size:11.5px;color:var(--muted);margin-top:5px}
+
+    .chart-row{display:flex;align-items:center;gap:10px}
+    .donut{flex:0 0 120px;width:120px}
+    .legend{flex:1;display:flex;flex-direction:column;gap:7px}
+    .lg{display:flex;align-items:center;font-size:13px}
+    .lg .dot{width:9px;height:9px;border-radius:50%;margin-right:8px;flex-shrink:0}
+    .lg .nm{color:#555;flex:1}
+    .lg .ct{color:#333;font-weight:600}
+    .lg .pc{color:var(--muted);font-size:11px;margin-left:6px}
+
+    .bars{padding:4px 16px 14px}
+    .empty-chart{padding:24px;text-align:center;color:#b5bac1;font-size:13px}
+
+    /* 工单管理 */
+    .filters{padding:6px 0}
+    .ticket{margin:12px;background:#fff;border-radius:var(--r);box-shadow:0 1px 3px rgba(20,20,40,.05);overflow:hidden}
+    .thead{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;cursor:pointer}
+    .tno{font-size:14px;font-weight:700;letter-spacing:.5px;color:var(--red)}
+    .tmeta{font-size:12px;color:var(--muted);margin-top:4px}
+    .badge{font-size:12px;padding:3px 10px;border-radius:12px;color:#fff;white-space:nowrap}
+    .tbody{padding:0 15px 14px;border-top:1px solid var(--line)}
+    .kv{display:flex;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+    .kv:last-child{border-bottom:none}
+    .kv .k{width:70px;color:var(--muted);flex-shrink:0}
+    .kv .v{color:#333;word-break:break-all;flex:1}
+    .idimgs{display:flex;gap:10px;margin-top:8px}
+    .idimgs img{width:104px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+    .note-in{padding:0 15px 10px}
+    .note-in input{width:100%;border:1px solid #e3e6ea;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;box-sizing:border-box}
+    .update{display:flex;gap:10px;margin-top:12px;align-items:center}
+    .update select{flex:1;padding:8px 10px;border:1px solid #e3e6ea;border-radius:8px;font-size:14px;background:#fff}
+    .empty{text-align:center;color:var(--muted);padding:52px 20px;font-size:14px}
+
+    .van-cell-group{border-radius:0!important}
+    :root{--van-primary-color:var(--red);--van-button-primary-background:var(--red);--van-button-primary-border-color:var(--red)}
+    .van-field__label{color:#555}
   </style>
 </head>
 <body>
-<div id="app">
+<div id="app" class="app">
   <!-- 登录 -->
-  <div v-if="!loggedIn" class="page-header">
-    <div class="header-logo">🔐</div>
-    <h1 class="header-title">管理后台登录</h1>
-    <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
-  </div>
-  <div v-if="!loggedIn" class="card">
-    <div class="card-header">
-      <div class="card-icon">🔑</div>
-      <span class="card-title">请输入管理员口令</span>
-    </div>
-      <van-cell-group>
-        <van-field v-model="loginPass" type="password" label="口令" placeholder="请输入管理员口令" @keyup.enter="doLogin" />
-      </van-cell-group>
-      <p v-if="loginErr" style="color:#f5222d;font-size:13px;padding:0 16px 8px;margin:0;">{{ loginErr }}</p>
-      <div class="btn-bar">
-        <van-button block type="primary" :loading="loginLoading" @click="doLogin">登录</van-button>
+  <div v-if="!loggedIn" class="topbar">
+    <div class="brand">
+      <div class="logo">沃</div>
+      <div>
+        <div class="brand-name">管理后台</div>
+        <div class="brand-sub">浙江海洋大学 · 中国联通</div>
       </div>
-      <p class="login-tip">口令以哈希形式存于数据库，前端不接触明文。如遗忘口令，请联系系统管理员在 Supabase Studio 重置 <code>site_config.admin_pass_hash</code>。</p>
+    </div>
+  </div>
+  <div v-if="!loggedIn" class="card login-card">
+    <div class="chead"><i class="bar"></i><h3>管理员登录</h3></div>
+    <van-cell-group>
+      <van-field v-model="loginPass" type="password" label="口令" placeholder="请输入管理员口令" @keyup.enter="doLogin"></van-field>
+    </van-cell-group>
+    <p v-if="loginErr" style="color:#E60012;font-size:13px;padding:0 16px 8px;margin:0">{{ loginErr }}</p>
+    <div class="bar">
+      <van-button block type="primary" :loading="loginLoading" @click="doLogin">登录</van-button>
+    </div>
+    <p class="login-tip">口令以哈希形式存于数据库，前端不接触明文。如遗忘口令，请在 Supabase Studio 重置 <code>site_config.admin_pass_hash</code>。</p>
   </div>
 
   <!-- 主界面 -->
   <template v-else>
-    <div class="page-header">
-      <div class="header-logo">🛠️</div>
-      <h1 class="header-title">管理后台</h1>
-      <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
-      <div class="header-query" @click="goUser">↩ 用户端</div>
-      <div class="header-query" style="top:auto;bottom:12px;" @click="doLogout">退出</div>
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">沃</div>
+        <div>
+          <div class="brand-name">管理后台</div>
+          <div class="brand-sub">浙江海洋大学 · 中国联通</div>
+        </div>
+      </div>
+      <div class="links">
+        <span class="top-link" @click="goUser">用户端</span>
+        <span class="top-link" @click="doLogout">退出</span>
+      </div>
     </div>
 
     <div class="tabs">
-      <div class="tab" :class="{active: activeTab==='new'}" @click="activeTab='new'">新建工单</div>
-      <div class="tab" :class="{active: activeTab==='manage'}" @click="activeTab='manage'">工单管理</div>
+      <div class="tab" :class="{active:activeTab==='dashboard'}" @click="switchTab('dashboard')">数据看板</div>
+      <div class="tab" :class="{active:activeTab==='new'}" @click="activeTab='new'">新建工单</div>
+      <div class="tab" :class="{active:activeTab==='manage'}" @click="activeTab='manage'">工单管理</div>
     </div>
 
-    <!-- 新建工单 -->
+    <!-- ════ 数据看板 ════ -->
+    <div v-show="activeTab==='dashboard'">
+      <div v-if="!stats" class="empty">{{ statsErr || '加载统计中…' }}</div>
+      <template v-else>
+        <div class="kpis">
+          <div class="kpi" v-for="k in kpis" :key="k.l">
+            <div class="n" :style="{color:k.c}">{{ k.n }}</div>
+            <div class="l">{{ k.l }}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><i class="bar"></i><h3>状态分布</h3></div>
+          <div style="padding:6px 16px 16px">
+            <div class="chart-row">
+              <div class="donut" v-html="donutSvg(stats.by_status)"></div>
+              <div class="legend">
+                <div class="lg" v-for="s in STATUS_ORDER" :key="s">
+                  <span class="dot" :style="{background: statusColor(s)}"></span>
+                  <span class="nm">{{ statusLabel(s) }}</span>
+                  <span class="ct">{{ stats.by_status[s] || 0 }}</span>
+                  <span class="pc">{{ pct(stats.by_status[s]||0, stats.total) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><i class="bar"></i><h3>各服务类型工单量</h3></div>
+          <div class="bars" v-html="barsSvg(stats.by_service)"></div>
+        </div>
+
+        <div class="card">
+          <div class="chead"><i class="bar"></i><h3>近 7 日提交趋势</h3></div>
+          <div style="padding:10px 14px 16px" v-html="trendSvg(stats.trend)"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ════ 新建工单 ════ -->
     <div v-show="activeTab==='new'">
       <div class="card">
-        <div class="card-header"><div class="card-icon">📋</div><span class="card-title">选择服务类型</span></div>
-        <div class="service-grid">
-          <div v-for="s in serviceTypes" :key="s.value" class="service-item" :class="{selected: form.serviceType===s.value}" @click="form.serviceType=s.value">
-            <div class="service-icon">{{ s.icon }}</div>
-            <div class="service-label">{{ s.label }}</div>
+        <div class="chead"><i class="bar"></i><h3>选择服务类型</h3></div>
+        <div class="sgrid">
+          <div v-for="s in serviceTypes" :key="s.value" class="sitem" :class="{sel:form.serviceType===s.value}" @click="form.serviceType=s.value">
+            <div class="sico" v-html="s.icon"></div>
+            <div class="slabel">{{ s.label }}</div>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><div class="card-icon">👤</div><span class="card-title">用户信息</span></div>
-        <div class="custom-field"><span class="custom-field-label">手机号</span><input class="custom-field-input" v-model="form.phone" placeholder="请输入用户手机号" maxlength="11"></div>
-        <div class="custom-field"><span class="custom-field-label">姓名</span><input class="custom-field-input" v-model="form.name" placeholder="请输入姓名"></div>
-        <div class="custom-field"><span class="custom-field-label">身份证号</span><input class="custom-field-input" v-model="form.idCard" placeholder="选填"></div>
-        <div class="custom-field"><span class="custom-field-label">学号</span><input class="custom-field-input" v-model="form.studentNo" placeholder="选填"></div>
-        <div class="custom-field" v-if="form.serviceType==='package_change'">
-          <span class="custom-field-label">目标套餐</span>
-          <span class="custom-field-link" @click="showPackagePicker=true">{{ selectedPackageLabel || '请选择套餐' }}</span>
+        <div class="chead"><i class="bar"></i><h3>用户信息</h3></div>
+        <div class="field"><label>手机号</label><input v-model="form.phone" maxlength="11" placeholder="请输入用户手机号"></div>
+        <div class="field"><label>姓名</label><input v-model="form.name" placeholder="请输入姓名"></div>
+        <div class="field"><label>身份证号</label><input v-model="form.idCard" placeholder="选填"></div>
+        <div class="field"><label>学号</label><input v-model="form.studentNo" placeholder="选填"></div>
+        <div class="field" v-if="form.serviceType==='package_change'" @click="showPackagePicker=true">
+          <label>目标套餐</label><span class="picker">{{ selectedPackageLabel || '请选择套餐' }}</span>
         </div>
-        <div class="custom-field custom-textarea"><span class="custom-field-label">需求描述</span><textarea v-model="form.description" placeholder="请描述处理内容/结果"></textarea></div>
+        <div class="field" style="align-items:flex-start"><label>需求描述</label><textarea v-model="form.description" placeholder="请描述处理内容/结果"></textarea></div>
       </div>
 
       <div class="card" v-if="needsIdCard">
-        <div class="card-header"><div class="card-icon">🪪</div><span class="card-title">上传身份证照片（选填）</span></div>
-        <div class="upload-grid">
+        <div class="chead"><i class="bar"></i><h3>上传身份证照片（选填）</h3></div>
+        <div class="ugrid">
           <div>
-            <div class="upload-label">正面</div>
-            <div class="upload-area" :class="{ 'has-file': idFrontPreview }" @click="triggerUpload('front')">
+            <div class="ulabel">人像面</div>
+            <div class="uarea" :class="{'has':idFrontPreview}" @click="triggerUpload('front')">
               <img v-if="idFrontPreview" :src="idFrontPreview">
-              <div v-else class="upload-placeholder"><div class="icon">📷</div><div class="text">点击上传</div></div>
+              <div v-else class="uplace"><div class="ic">📷</div></div>
             </div>
           </div>
           <div>
-            <div class="upload-label">反面</div>
-            <div class="upload-area" :class="{ 'has-file': idBackPreview }" @click="triggerUpload('back')">
+            <div class="ulabel">国徽面</div>
+            <div class="uarea" :class="{'has':idBackPreview}" @click="triggerUpload('back')">
               <img v-if="idBackPreview" :src="idBackPreview">
-              <div v-else class="upload-placeholder"><div class="icon">📷</div><div class="text">点击上传</div></div>
+              <div v-else class="uplace"><div class="ic">📷</div></div>
             </div>
           </div>
         </div>
@@ -184,32 +247,32 @@
         <input ref="uploadBack" type="file" accept="image/*" style="display:none" @change="handleFileChange($event,'back')">
       </div>
 
-      <div class="btn-bar">
+      <div class="bar">
         <van-button block type="primary" :loading="submitting" @click="submitAdmin">创建工单</van-button>
       </div>
     </div>
 
-    <!-- 工单管理 -->
+    <!-- ════ 工单管理 ════ -->
     <div v-show="activeTab==='manage'">
       <div class="card">
-        <div class="card-header"><div class="card-icon">🔎</div><span class="card-title">筛选工单</span></div>
+        <div class="chead"><i class="bar"></i><h3>筛选工单</h3></div>
         <div class="filters">
-          <div class="custom-field"><span class="custom-field-label">手机号</span><input class="custom-field-input" v-model="filters.phone" placeholder="选填"></div>
-          <div class="custom-field"><span class="custom-field-label">工单号</span><input class="custom-field-input" v-model="filters.ticket_no" placeholder="选填"></div>
-          <div class="custom-field"><span class="custom-field-label">状态</span>
+          <div class="field"><label>手机号</label><input v-model="filters.phone" placeholder="选填"></div>
+          <div class="field"><label>工单号</label><input v-model="filters.ticket_no" placeholder="选填"></div>
+          <div class="field"><label>状态</label>
             <select v-model="filters.status">
               <option value="">全部</option>
               <option v-for="s in STATUS_LIST" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
           </div>
-          <div class="custom-field"><span class="custom-field-label">服务类型</span>
+          <div class="field"><label>服务类型</label>
             <select v-model="filters.service">
               <option value="">全部</option>
               <option v-for="s in ADMIN_SERVICE_TYPES" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
           </div>
         </div>
-        <div class="btn-bar" style="padding-top:6px;">
+        <div class="bar" style="padding-top:6px">
           <van-button block type="primary" :loading="loading" @click="doSearch">查询</van-button>
         </div>
       </div>
@@ -217,15 +280,15 @@
       <div v-if="tickets.length===0 && queried" class="empty">未查询到工单</div>
       <div v-if="!queried" class="empty">请输入筛选条件后点击查询</div>
 
-      <div v-for="t in tickets" :key="t.ticket_no" class="ticket-item">
-        <div class="ticket-head" @click="toggle(t)">
+      <div v-for="t in tickets" :key="t.ticket_no" class="ticket">
+        <div class="thead" @click="toggle(t)">
           <div>
-            <div class="ticket-no">{{ t.ticket_no }}</div>
-            <div class="ticket-meta">{{ serviceLabel(t.service_type) }} · {{ t.phone }} · {{ formatDate(t.created_at) }}</div>
+            <div class="tno">{{ t.ticket_no }}</div>
+            <div class="tmeta">{{ serviceLabel(t.service_type) }} · {{ t.phone }} · {{ formatDate(t.created_at) }}</div>
           </div>
-          <span class="status-badge" :style="{background: statusInfo(t.status).color}">{{ statusInfo(t.status).label }}</span>
+          <span class="badge" :style="{background:statusInfo(t.status).color}">{{ statusInfo(t.status).label }}</span>
         </div>
-        <div v-if="expanded===t.ticket_no" class="ticket-body">
+        <div v-if="expanded===t.ticket_no" class="tbody">
           <div class="kv"><span class="k">姓名</span><span class="v">{{ t.name || '—' }}</span></div>
           <div class="kv"><span class="k">身份证</span><span class="v">{{ t.id_card || '—' }}</span></div>
           <div class="kv"><span class="k">学号</span><span class="v">{{ t.student_no || '—' }}</span></div>
@@ -234,34 +297,31 @@
           <div class="kv"><span class="k">邮箱</span><span class="v">{{ t.email || '—' }}</span></div>
           <div class="kv"><span class="k">创建时间</span><span class="v">{{ formatDate(t.created_at) }}</span></div>
           <div class="kv" v-if="t.completed_at"><span class="k">完成时间</span><span class="v">{{ formatDate(t.completed_at) }}</span></div>
-          <div class="id-imgs" v-if="detailUrls[t.ticket_no] && (detailUrls[t.ticket_no].front || detailUrls[t.ticket_no].back)">
+          <div class="idimgs" v-if="detailUrls[t.ticket_no] && (detailUrls[t.ticket_no].front || detailUrls[t.ticket_no].back)">
             <img v-if="detailUrls[t.ticket_no].front" :src="detailUrls[t.ticket_no].front" @click="preview(detailUrls[t.ticket_no].front)">
             <img v-if="detailUrls[t.ticket_no].back" :src="detailUrls[t.ticket_no].back" @click="preview(detailUrls[t.ticket_no].back)">
           </div>
-          <div class="status-update-note">
-            <input class="custom-field-input" v-model="t._note" placeholder="处理备注（可选，将记入操作日志）" />
+          <div class="note-in">
+            <input v-model="t._note" placeholder="处理备注（可选，将记入操作日志）">
           </div>
-          <div class="status-update">
+          <div class="update">
             <select v-model="t._newStatus">
               <option v-for="s in STATUS_LIST" :key="s.value" :value="s.value">{{ s.label }}</option>
             </select>
-            <van-button size="small" type="primary" @click="updateStatus(t)">更新状态</van-button>
+            <van-button size="small" type="primary" @click="updateStatus(t)">更新</van-button>
           </div>
         </div>
       </div>
 
-      <div v-if="tickets.length > 0" style="padding:4px 12px 8px;text-align:center;font-size:12px;color:#999">
-        已加载 {{ tickets.length }} 条
-      </div>
+      <div v-if="tickets.length>0" style="padding:4px 12px 8px;text-align:center;font-size:12px;color:var(--muted)">已加载 {{ tickets.length }} 条</div>
       <div v-if="hasMore" style="padding:0 12px 24px">
         <van-button block plain round :loading="loading" @click="loadMore">加载更多</van-button>
       </div>
     </div>
   </template>
 
-  <!-- 套餐选择弹窗 -->
   <van-popup v-model:show="showPackagePicker" position="bottom" round>
-    <van-picker :columns="packageColumns" @confirm="onPackageConfirm" @cancel="showPackagePicker=false" title="选择套餐" />
+    <van-picker :columns="packageColumns" @confirm="onPackageConfirm" @cancel="showPackagePicker=false" title="选择套餐"></van-picker>
   </van-popup>
 </div>
 
@@ -269,14 +329,19 @@
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 const ICONS = {
-  package_change: '📦', broadband_open: '🌐', broadband_close: '🔌',
-  query_account: '🔑', trouble_report: '🛠️', cancel_account: '❌',
+  package_change:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>',
+  broadband_open:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5a10 10 0 0115 0"/><path d="M7.5 15.5a5.5 5.5 0 019 0"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  broadband_close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9 16.2a5.5 5.5 0 015.4-.2"/><path d="M4.5 12.5a10 10 0 014.4-2.9M19.5 12.5a10 10 0 00-4.8-3"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  query_account:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.5 12.5L21 2M16 7l3 3M19 4l2 2"/></svg>',
+  trouble_report:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 01-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.6 2.6-2.1-2.1 2.7-2.5z"/></svg>',
+  cancel_account:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M17 11l4 4M21 11l-4 4"/></svg>',
 };
 const PACKAGE_MAP = {
   basic: '基础套餐 20元/月', standard: '标准套餐 40元/月',
   premium: '高级套餐 60元/月', addon: '叠加流量包 10元/10GB',
 };
 const ID_REQUIRED_TYPES = APP_CONFIG.ID_REQUIRED_TYPES || ['package_change', 'broadband_open', 'broadband_close', 'cancel_account'];
+const STATUS_ORDER = ['pending', 'processing', 'dispatched', 'completed', 'closed'];
 
 createApp({
   setup() {
@@ -290,11 +355,11 @@ createApp({
     const loginErr = ref('');
     const loginLoading = ref(false);
 
-    const activeTab = ref('new');
+    const activeTab = ref('dashboard');
 
     // ── 新建工单表单 ──
     const form = reactive({ serviceType: '', phone: '', name: '', idCard: '', studentNo: '', description: '', package: '', email: '', emailNotify: false });
-    const serviceTypes = APP_CONFIG.ADMIN_SERVICE_TYPES.map(s => ({ ...s, icon: ICONS[s.value] || '📋' }));
+    const serviceTypes = APP_CONFIG.ADMIN_SERVICE_TYPES.map(s => ({ ...s, icon: ICONS[s.value] || ICONS.trouble_report }));
     const ADMIN_SERVICE_TYPES = APP_CONFIG.ADMIN_SERVICE_TYPES;
     const packages = [
       { value: 'basic', text: '基础套餐 20元/月' },
@@ -324,6 +389,108 @@ createApp({
     const offset = ref(0);
     const hasMore = ref(false);
 
+    // ── 看板统计 ──
+    const stats = ref(null);
+    const statsErr = ref('');
+    const switchTab = (tab) => {
+      activeTab.value = tab;
+      if (tab === 'dashboard' && !stats.value) loadStats();
+    };
+    const loadStats = async () => {
+      statsErr.value = '';
+      try {
+        const sb = getSb();
+        const { data, error } = await sb.rpc('get_dashboard_stats');
+        if (error) throw error;
+        stats.value = data || {};
+      } catch (e) {
+        statsErr.value = '统计加载失败，请稍后重试';
+        console.warn('loadStats 失败:', e);
+      }
+    };
+    const kpis = computed(() => {
+      const s = stats.value; if (!s) return [];
+      const bs = s.by_status || {};
+      return [
+        { n: s.total || 0,        l: '工单总量',     c: '#E60012' },
+        { n: s.today || 0,        l: '今日新增',     c: '#E60012' },
+        { n: bs.pending || 0,     l: '待处理',       c: '#FF9500' },
+        { n: (bs.processing||0) + (bs.dispatched||0), l: '处理中', c: '#5856D6' },
+        { n: (bs.completed||0) + (bs.closed||0),     l: '已完成',   c: '#1F9D55' },
+        { n: (s.avg_hours || 0) + 'h', l: '平均处理时长', c: '#007AFF' },
+      ];
+    });
+    const statusColor = (k) => APP_CONFIG.STATUS_MAP[k]?.color || '#999';
+    const statusLabel = (k) => APP_CONFIG.STATUS_MAP[k]?.label || k;
+    const pct = (v, total) => total ? Math.round(v / total * 100) + '%' : '0%';
+
+    // 环形图（状态分布）
+    const donutSvg = (byStatus) => {
+      const bs = byStatus || {};
+      const total = STATUS_ORDER.reduce((s, k) => s + (bs[k] || 0), 0);
+      const r = 52, C = 2 * Math.PI * r;
+      if (!total) return '<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="#EEF0F3" stroke-width="16"/></svg>';
+      let acc = 0, segs = '';
+      STATUS_ORDER.forEach(k => {
+        const v = bs[k] || 0; if (!v) return;
+        const len = v / total * C;
+        segs += `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${statusColor(k)}" stroke-width="16" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-acc).toFixed(2)}" transform="rotate(-90 60 60)"/>`;
+        acc += len;
+      });
+      const solved = (bs.completed || 0) + (bs.closed || 0);
+      return `<svg viewBox="0 0 120 120">
+        ${segs}
+        <text x="60" y="55" text-anchor="middle" font-size="12" fill="#8A9099">解决率</text>
+        <text x="60" y="75" text-anchor="middle" font-size="20" font-weight="700" fill="#1A1A1A">${Math.round(solved / total * 100)}%</text>
+      </svg>`;
+    };
+    // 横向条形图（各服务类型）
+    const barsSvg = (byService) => {
+      const map = APP_CONFIG.SERVICE_TYPE_MAP;
+      const entries = Object.entries(byService || {}).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) return '<div class="empty-chart">暂无工单数据</div>';
+      const max = Math.max(...entries.map(e => e[1]), 1);
+      let html = '';
+      entries.forEach(([k, v]) => {
+        const w = Math.round(v / max * 100);
+        html += `<div style="margin-bottom:13px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+            <span style="color:#333">${map[k] || k}</span><span style="color:#8A9099">${v}</span>
+          </div>
+          <div style="height:8px;background:#F0F1F3;border-radius:5px;overflow:hidden">
+            <div style="height:100%;width:${w}%;background:linear-gradient(90deg,#E60012,#FF6A4D);border-radius:5px"></div>
+          </div>
+        </div>`;
+      });
+      return html;
+    };
+    // 折线面积图（近7日趋势）
+    const trendSvg = (trend) => {
+      const t = (trend || []).slice(-7);
+      if (!t.length) return '<div class="empty-chart">暂无趋势数据</div>';
+      const w = 300, h = 120, pad = 22;
+      const max = Math.max(...t.map(x => x.cnt), 1);
+      const n = t.length;
+      const stepX = n > 1 ? (w - pad * 2) / (n - 1) : 0;
+      const pts = t.map((x, i) => {
+        const x1 = pad + i * stepX;
+        const y1 = h - pad - (x.cnt / max) * (h - pad * 2);
+        return [x1, y1, x];
+      });
+      const line = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+      const area = `${pad},${(h - pad).toFixed(1)} ${line} ${(w - pad).toFixed(1)},${(h - pad).toFixed(1)}`;
+      let dots = '', labels = '';
+      pts.forEach(p => {
+        dots += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#E60012"/>`;
+        labels += `<text x="${p[0].toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="9" fill="#b5bac1">${p[2].day}</text>`;
+      });
+      return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block">
+        <polygon points="${area}" fill="rgba(230,0,18,.08)"/>
+        <polyline points="${line}" fill="none" stroke="#E60012" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}${labels}
+      </svg>`;
+    };
+
     // ── 登录 / 登出 ──
     const doLogin = async () => {
       loginLoading.value = true; loginErr.value = '';
@@ -333,6 +500,8 @@ createApp({
         if (error) throw error;
         token.value = data;
         sessionStorage.setItem('admin_token', data);
+        loadStats();
+        activeTab.value = 'dashboard';
       } catch (e) {
         const msg = String(e?.message || '');
         if (/account_locked/.test(msg)) loginErr.value = '账户已锁定，请稍后再试';
@@ -395,7 +564,6 @@ createApp({
       const ticketNo = generateTicketNo();
       try {
         const sb = getSb();
-        // 先传照片（如需），再写库，降低半失败概率
         let f = '', b = '';
         if (needsIdCard.value && (idFrontBlob.value || idBackBlob.value)) {
           try {
@@ -406,8 +574,6 @@ createApp({
             vant.showToast({ message: '身份证照片上传失败，工单仍会创建', icon: 'fail', duration: 3500 });
           }
         }
-        // 改为调用 submit_ticket 存储过程（SECURITY DEFINER，绕开 RLS 缓存问题；
-        // 管理员代客提交传 p_throttle=false 跳过频率限制，且 id_card/student_no 可选）。
         const { error } = await sb.rpc('submit_ticket', {
           p_ticket_no:    ticketNo,
           p_phone:        form.phone,
@@ -425,6 +591,7 @@ createApp({
         if (error) throw error;
         vant.showToast({ message: '工单已创建 ' + ticketNo, icon: 'success' });
         resetAdmin();
+        loadStats();
       } catch (err) {
         vant.showToast({ message: '创建失败：' + (err.message || err), icon: 'fail' });
       } finally { submitting.value = false; }
@@ -457,13 +624,8 @@ createApp({
         });
         if (error) throw error;
         const rows = (data || []).map(t => ({ ...t, _newStatus: t.status, _note: '' }));
-        if (reset) {
-          tickets.value = rows;
-          offset.value = rows.length;
-        } else {
-          tickets.value = tickets.value.concat(rows);
-          offset.value += rows.length;
-        }
+        if (reset) { tickets.value = rows; offset.value = rows.length; }
+        else { tickets.value = tickets.value.concat(rows); offset.value += rows.length; }
         hasMore.value = rows.length === PAGE_SIZE;
         queried.value = true;
         expanded.value = null;
@@ -499,6 +661,7 @@ createApp({
         t.status = t._newStatus;
         t._note = '';
         vant.showToast({ message: '状态已更新', icon: 'success' });
+        loadStats();
       } catch (err) {
         vant.showToast({ message: '更新失败：' + (err.message || err), icon: 'fail' });
       }
@@ -515,18 +678,20 @@ createApp({
     };
 
     onMounted(() => {
-      if (loggedIn.value) activeTab.value = 'manage';
+      if (loggedIn.value) { activeTab.value = 'dashboard'; loadStats(); }
     });
 
     return {
       loggedIn, loginPass, loginErr, loginLoading, doLogin, doLogout, goUser,
-      activeTab, form, serviceTypes, ADMIN_SERVICE_TYPES, packages, packageColumns,
+      activeTab, switchTab,
+      form, serviceTypes, ADMIN_SERVICE_TYPES, packages, packageColumns,
       needsIdCard, selectedPackageLabel, showPackagePicker, onPackageConfirm,
       uploadFront, uploadBack, idFrontPreview, idBackPreview, triggerUpload, handleFileChange,
       submitting, submitAdmin,
       filters, STATUS_LIST, tickets, queried, loading, expanded, detailUrls,
       hasMore, loadMore, doSearch, toggle, preview, updateStatus,
       PACKAGE_MAP, serviceLabel, statusInfo, formatDate,
+      stats, kpis, donutSvg, barsSvg, trendSvg, statusColor, statusLabel, pct, STATUS_ORDER,
     };
   },
 }).use(vant).mount('#app');

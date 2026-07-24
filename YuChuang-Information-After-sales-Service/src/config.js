@@ -48,7 +48,7 @@ const APP_CONFIG = {
 
   STATUS_MAP: {
     pending:    { label: '待处理', color: '#FF9500' },
-    processing: { label: '处理中', color: '#007AFF' },
+    processing: { label: '处理中', color: '#E60012' },
     dispatched: { label: '已派发联通', color: '#5856D6' },
     completed:  { label: '已完成', color: '#34C759' },
     closed:     { label: '已关闭', color: '#8E8E93' },

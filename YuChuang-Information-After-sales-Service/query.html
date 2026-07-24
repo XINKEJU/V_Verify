@@ -6,271 +6,143 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://beacon.cdn.qq.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://*.alicdn.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; object-src 'none'; form-action 'self'">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta http-equiv="Referrer-Policy" content="no-referrer">
-  <title>工单查询 · 浙江海洋大学校园网</title>
+  <title>工单进度查询 · 浙江海洋大学</title>
   <link rel="stylesheet" href="./vendor/vant.min.css">
   <script src="./vendor/vue.global.prod.js"></script>
   <script src="./vendor/vant.min.js"></script>
   <script src="./vendor/supabase.min.js"></script>
   <script src="./src/config.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: #f5f7fa;
-      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
-      min-height: 100vh;
+    :root{
+      --red:#E60012;--red-d:#C1000E;--red-soft:#FDECEE;
+      --bg:#F3F4F6;--card:#fff;--text:#1A1A1A;--muted:#8A9099;--line:#EEF0F3;--r:16px;
     }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;min-height:100vh}
+    .app{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;padding-bottom:8px}
 
-    .page-header {
-      background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
-      padding: 24px 20px 20px;
-      color: #fff;
-      position: relative; overflow: hidden;
-    }
-    .page-header::before {
-      content: ''; position: absolute;
-      right: -30px; top: -30px;
-      width: 160px; height: 160px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.08);
-    }
-    .header-logo {
-      width: 44px; height: 44px;
-      background: rgba(255,255,255,.2);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; margin-bottom: 10px;
-    }
-    .header-title  { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-    .header-sub    { font-size: 13px; opacity: .8; margin: 0; }
+    .topbar{background:var(--red);color:#fff;padding:20px 18px 16px;position:relative}
+    .brand{display:flex;align-items:center;gap:11px}
+    .logo{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.18);
+      display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;letter-spacing:-1px}
+    .brand-name{font-size:18px;font-weight:700;letter-spacing:.5px}
+    .brand-sub{font-size:12px;opacity:.88;margin-top:2px}
+    .topbar .links{position:absolute;top:16px;right:14px}
+    .top-link{font-size:12px;color:#fff;background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;cursor:pointer}
 
-    .search-card {
-      margin: 14px 12px;
-      background: #fff;
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .search-title {
-      font-size: 15px; font-weight: 600;
-      color: #1a1a1a; margin-bottom: 12px;
-    }
+    .card{margin:12px;background:var(--card);border-radius:var(--r);box-shadow:0 1px 3px rgba(20,20,40,.05);overflow:hidden}
+    .chead{padding:14px 16px 10px;display:flex;align-items:center;gap:8px}
+    .chead .bar{width:3px;height:15px;background:var(--red);border-radius:2px}
+    .chead h3{margin:0;font-size:15px;font-weight:700}
 
-    /* 工单卡片 */
-    .ticket-card {
-      margin: 0 12px 12px;
-      background: #fff;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .ticket-header {
-      padding: 14px 16px 10px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .ticket-no {
-      font-size: 14px; font-weight: 700;
-      color: #333; letter-spacing: .5px;
-    }
-    .copy-btn {
-      display: inline-block; margin-left: 8px;
-      font-size: 11px; color: #722ed1; font-weight: 600;
-      border: 1px solid #efd9ff; background: #f9f0ff;
-      border-radius: 10px; padding: 1px 8px; cursor: pointer;
-      vertical-align: middle;
-    }
-    .status-badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 12px; font-weight: 600;
-    }
-    .ticket-body { padding: 0 16px 14px; }
-    .ticket-row {
-      display: flex; align-items: flex-start;
-      gap: 8px; margin-bottom: 8px;
-      font-size: 13px; color: #555;
-    }
-    .ticket-row .label { color: #999; white-space: nowrap; min-width: 60px; }
-    .ticket-row .value { color: #333; flex: 1; }
-    .ticket-divider { height: 1px; background: #f5f5f5; margin: 10px 0; }
-    .ticket-result {
-      background: #f6ffed;
-      border: 1px solid #b7eb8f;
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 13px; color: #389e0d;
-    }
+    .search{margin:12px;background:var(--card);border-radius:var(--r);padding:6px 4px 14px;box-shadow:0 1px 3px rgba(20,20,40,.05)}
+    .field{display:flex;align-items:center;padding:12px 14px;min-height:52px;border-bottom:1px solid var(--line)}
+    .field:last-of-type{border-bottom:none}
+    .field label{width:70px;flex-shrink:0;font-size:14px;color:#555}
+    .field input{flex:1;border:none;outline:none;font-size:14px;background:transparent;padding:0}
+    .field input::placeholder{color:#c2c6cc}
+    .sbtn{margin:8px 12px 0}
 
-    /* 时间轴 */
-    .timeline-wrap { padding: 10px 16px 14px; }
-    .timeline-title { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 10px; }
-    .timeline {
-      position: relative;
-      padding-left: 20px;
-    }
-    .timeline::before {
-      content: ''; position: absolute;
-      left: 6px; top: 8px; bottom: 0;
-      width: 2px; background: #e8e8e8;
-    }
-    .timeline-item {
-      position: relative;
-      margin-bottom: 12px;
-    }
-    .timeline-item::before {
-      content: ''; position: absolute;
-      left: -17px; top: 5px;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #d9d9d9;
-    }
-    .timeline-item.active::before { background: #722ed1; box-shadow: 0 0 0 3px rgba(114,46,209,.2); }
-    .timeline-item.done::before   { background: #52c41a; }
-    .timeline-time  { font-size: 11px; color: #bbb; margin-bottom: 2px; }
-    .timeline-event { font-size: 13px; color: #333; }
+    .count{font-size:13px;color:var(--muted);padding:6px 16px 8px}
+    .ticket{margin:12px;background:var(--card);border-radius:var(--r);box-shadow:0 1px 3px rgba(20,20,40,.05);overflow:hidden}
+    .thead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+    .tno{font-size:14px;font-weight:700;letter-spacing:.5px}
+    .copy{display:inline-block;margin-left:8px;font-size:11px;color:var(--red);background:var(--red-soft);
+      border-radius:10px;padding:1px 9px;cursor:pointer;vertical-align:middle;font-weight:600}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:600}
+    .tbody{padding:0 16px 14px}
+    .row{display:flex;gap:8px;font-size:13px;margin-bottom:8px}
+    .row .k{color:var(--muted);white-space:nowrap;min-width:60px}
+    .row .v{color:#333;flex:1;word-break:break-all}
+    .divider{height:1px;background:var(--line);margin:10px 0}
+    .result{background:#F3FBF6;border:1px solid #B7E8C8;border-radius:10px;padding:10px 12px;font-size:13px;color:#1F9D55;margin-top:8px}
 
-    .empty-state {
-      text-align: center; padding: 60px 24px;
-      color: #bbb; font-size: 14px;
-    }
-    .empty-state .emoji { font-size: 52px; margin-bottom: 12px; }
+    .tl{padding:6px 0 6px}
+    .tl-title{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
+    .tl{position:relative;padding-left:20px}
+    .tl::before{content:'';position:absolute;left:6px;top:8px;bottom:0;width:2px;background:var(--line)}
+    .tn{position:relative;margin-bottom:12px}
+    .tn::before{content:'';position:absolute;left:-17px;top:5px;width:8px;height:8px;border-radius:50%;background:#d7dadf}
+    .tn.active::before{background:var(--red);box-shadow:0 0 0 3px rgba(230,0,18,.18)}
+    .tn.done::before{background:#1F9D55}
+    .tn .t{font-size:11px;color:#b5bac1;margin-bottom:2px}
+    .tn .e{font-size:13px;color:#333}
 
-    :root {
-      --van-primary-color: #722ed1;
-      --van-button-primary-background: #722ed1;
-      --van-button-primary-border-color: #722ed1;
-    }
-    .van-field__label { color: #555; }
+    .empty{text-align:center;padding:64px 24px;color:#b5bac1}
+    .empty .e{font-size:48px;margin-bottom:12px}
+    .empty .t{font-size:14px}
+    .empty .s{font-size:12px;margin-top:6px;color:#cdd2d8}
 
-    /* ── 自定义输入框（替代van-field，避免Vant4 CDN渲染Bug）── */
-    .query-input {
-      display: flex; align-items: center;
-      padding: 10px 16px; min-height: 48px;
-      background: #fff;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .query-input:last-child { border-bottom: none; }
-    .query-input-label {
-      width: 72px; flex-shrink: 0;
-      font-size: 14px; color: #555;
-    }
-    .query-input-field {
-      flex: 1; border: none; outline: none;
-      font-size: 14px; color: #1a1a1a;
-      background: transparent; padding: 0;
-    }
-    .query-input-field::placeholder { color: #c0c0c0; }
+    .foot{display:flex;gap:10px;padding:12px 12px 28px}
+    .foot button{flex:1}
+
+    .van-cell-group{border-radius:0!important}
+    :root{--van-primary-color:var(--red);--van-button-primary-background:var(--red);--van-button-primary-border-color:var(--red)}
+    .van-field__label{color:#555}
   </style>
 </head>
 <body>
-<div id="app">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="header-logo">🔍</div>
-    <h1 class="header-title">工单进度查询</h1>
-    <p class="header-sub">浙江海洋大学 · 联通校园网服务中心</p>
-    <div class="header-query" @click="goAdmin">🔐 管理员</div>
-  </div>
-
-  <!-- 搜索表单 -->
-  <div class="search-card">
-    <div class="search-title">输入查询信息</div>
-    <div style="border-radius:10px;overflow:hidden;border:1px solid #ebedf0">
-      <div class="query-input">
-        <span class="query-input-label">📱 手机号码</span>
-        <input class="query-input-field" v-model="queryPhone" type="tel" maxlength="11" placeholder="请输入您的手机号" />
-      </div>
-      <div class="query-input">
-        <span class="query-input-label">📋 工单号</span>
-        <input class="query-input-field" v-model="queryTicketNo" placeholder="可选，如 GY-20260101-0001" />
+<div id="app" class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">沃</div>
+      <div>
+        <div class="brand-name">工单进度查询</div>
+        <div class="brand-sub">浙江海洋大学 · 中国联通</div>
       </div>
     </div>
-    <van-button
-      block type="primary" round
-      :loading="loading"
-      loading-text="查询中..."
-      @click="doQuery"
-      style="margin-top:14px"
-    >
-      查询工单
-    </van-button>
+    <div class="links"><span class="top-link" @click="goAdmin">管理端</span></div>
   </div>
 
-  <!-- 查询结果 -->
+  <div class="search">
+    <div class="chead"><i class="bar"></i><h3>查询我的工单</h3></div>
+    <div class="field"><label>手机号</label><input v-model="queryPhone" type="tel" maxlength="11" placeholder="请输入您的手机号"></div>
+    <div class="field"><label>工单号</label><input v-model="queryTicketNo" placeholder="可选，如 GY-20260101-0001"></div>
+    <div class="sbtn">
+      <van-button block type="primary" round :loading="loading" loading-text="查询中..." @click="doQuery">查询</van-button>
+    </div>
+  </div>
+
   <div v-if="queried">
-    <!-- 无结果 -->
-    <div v-if="tickets.length === 0" class="empty-state">
-      <div class="emoji">📭</div>
-      <div>未找到相关工单</div>
-      <div style="font-size:12px;margin-top:6px;color:#ccc">请确认手机号或工单号是否正确</div>
+    <div v-if="tickets.length === 0" class="empty">
+      <div class="e">📭</div>
+      <div class="t">未找到相关工单</div>
+      <div class="s">请确认手机号或工单号是否正确</div>
     </div>
 
-    <!-- 工单列表 -->
     <div v-else>
-      <div style="padding:4px 12px 10px;font-size:13px;color:#999">
-        共找到 {{ tickets.length }} 条工单记录
-      </div>
-      <div class="ticket-card" v-for="t in tickets" :key="t.id">
-        <!-- 卡片头 -->
-        <div class="ticket-header">
+      <div class="count">共 {{ tickets.length }} 条工单记录</div>
+      <div class="ticket" v-for="t in tickets" :key="t.id">
+        <div class="thead">
           <div>
-            <span class="ticket-no">{{ t.ticket_no }}</span>
-            <span class="copy-btn" @click="copyNo(t.ticket_no)">复制</span>
+            <span class="tno">{{ t.ticket_no }}</span>
+            <span class="copy" @click="copyNo(t.ticket_no)">复制</span>
           </div>
-          <span
-            class="status-badge"
-            :style="{
-              background: statusInfo(t.status).bg,
-              color: statusInfo(t.status).color,
-            }"
-          >
-            {{ statusInfo(t.status).icon }} {{ statusInfo(t.status).label }}
+          <span class="badge" :style="{background:statusInfo(t.status).bg,color:statusInfo(t.status).color}">
+            {{ statusInfo(t.status).label }}
           </span>
         </div>
+        <div class="tbody">
+          <div class="row"><span class="k">服务类型</span><span class="v">{{ serviceLabel(t.service_type) }}</span></div>
+          <div class="row"><span class="k">需求描述</span><span class="v">{{ t.description || '—' }}</span></div>
+          <div class="row" v-if="t.package"><span class="k">目标套餐</span><span class="v">{{ PACKAGE_MAP[t.package] || t.package }}</span></div>
+          <div class="row"><span class="k">提交时间</span><span class="v">{{ formatDate(t.created_at) }}</span></div>
+          <div class="row" v-if="t.completed_at"><span class="k">完成时间</span><span class="v">{{ formatDate(t.completed_at) }}</span></div>
 
-        <!-- 信息行 -->
-        <div class="ticket-body">
-          <div class="ticket-row">
-            <span class="label">服务类型</span>
-            <span class="value">{{ serviceLabel(t.service_type) }}</span>
-          </div>
-          <div class="ticket-row">
-            <span class="label">需求描述</span>
-            <span class="value">{{ t.description || '—' }}</span>
-          </div>
-          <div v-if="t.package" class="ticket-row">
-            <span class="label">目标套餐</span>
-            <span class="value">{{ PACKAGE_MAP[t.package] || t.package }}</span>
-          </div>
-          <div class="ticket-row">
-            <span class="label">提交时间</span>
-            <span class="value">{{ formatDate(t.created_at) }}</span>
-          </div>
-          <div v-if="t.completed_at" class="ticket-row">
-            <span class="label">完成时间</span>
-            <span class="value">{{ formatDate(t.completed_at) }}</span>
-          </div>
-
-          <!-- 处理结果 -->
           <div v-if="t.result" style="margin-top:10px">
-            <div class="ticket-result">
-              ✅ 处理结果：{{ t.result }}
-            </div>
+            <div class="result">✅ 处理结果：{{ t.result }}</div>
           </div>
 
-          <div class="ticket-divider" />
+          <div class="divider"></div>
 
-          <!-- 时间轴进度 -->
-          <div class="timeline-wrap" style="padding-left:0;padding-right:0">
-            <div class="timeline-title">处理进度</div>
-            <div class="timeline">
-              <div
-                v-for="(node, i) in buildTimeline(t)" :key="i"
-                :class="['timeline-item', node.class]"
-              >
-                <div class="timeline-time">{{ node.time }}</div>
-                <div class="timeline-event">{{ node.event }}</div>
+          <div class="tl">
+            <div class="tl-title">处理进度</div>
+            <div class="tl">
+              <div v-for="(node,i) in buildTimeline(t)" :key="i" :class="['tn',node.class]">
+                <div class="t">{{ node.time }}</div>
+                <div class="e">{{ node.event }}</div>
               </div>
             </div>
           </div>
@@ -279,9 +151,8 @@
     </div>
   </div>
 
-  <!-- 底部操作 -->
   <div style="padding:12px 12px 32px;display:flex;gap:10px">
-    <van-button block plain round @click="goBack">← 返回提交</van-button>
+    <van-button block plain round @click="goBack">返回办理</van-button>
     <van-button v-if="queried" block plain round type="primary" @click="doQuery">刷新</van-button>
   </div>
 </div>
@@ -297,13 +168,9 @@ createApp({
     const queried = ref(false);
     const tickets = ref([]);
 
-    // 从 sessionStorage 读取提交页传入的手机号（避免 URL 明文泄露）
     onMounted(() => {
       const sp = sessionStorage.getItem('query_phone');
-      if (sp) {
-        queryPhone.value = sp;
-        doQuery();
-      }
+      if (sp) { queryPhone.value = sp; doQuery(); }
     });
 
     const doQuery = async () => {
@@ -314,7 +181,6 @@ createApp({
       loading.value = true;
       try {
         const sb = supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
-        // 走安全 RPC：仅返回本手机号工单，不暴露身份证等敏感字段
         const { data, error } = await sb.rpc('get_my_tickets', { p_phone: queryPhone.value });
         if (error) throw error;
         tickets.value = data || [];
@@ -327,22 +193,19 @@ createApp({
       }
     };
 
-    // 状态信息映射
     const statusInfo = (status) => {
       const map = {
-        pending:    { label: '待处理', color: '#d46b08', bg: '#fff7e6', icon: '⏳' },
-        processing: { label: '处理中', color: '#0958d9', bg: '#e6f4ff', icon: '⚙️' },
-        dispatched: { label: '已派发联通', color: '#531dab', bg: '#f9f0ff', icon: '📨' },
-        completed:  { label: '已完成',  color: '#389e0d', bg: '#f6ffed', icon: '✅' },
-        closed:     { label: '已关闭',  color: '#8c8c8c', bg: '#f5f5f5', icon: '🔒' },
+        pending:    { label: '待处理', color: '#D97706', bg: '#FEF3E2' },
+        processing: { label: '处理中', color: '#E60012', bg: '#FDECEE' },
+        dispatched: { label: '已派发联通', color: '#5856D6', bg: '#F1EEFD' },
+        completed:  { label: '已完成',  color: '#1F9D55', bg: '#F3FBF6' },
+        closed:     { label: '已关闭',  color: '#8E8E93', bg: '#F5F5F5' },
       };
-      return map[status] || { label: status, color: '#666', bg: '#f5f5f5', icon: '❓' };
+      return map[status] || { label: status, color: '#666', bg: '#F5F5F5' };
     };
 
-    // 服务类型标签
     const serviceLabel = (type) => APP_CONFIG.SERVICE_TYPE_MAP[type] || type;
 
-    // 套餐标签
     const PACKAGE_MAP = {
       basic:    '基础套餐 20元/月',
       standard: '标准套餐 40元/月',
@@ -350,23 +213,18 @@ createApp({
       addon:    '叠加流量包 10元/10GB',
     };
 
-    // 日期格式化
     const formatDate = (iso) => {
       if (!iso) return '—';
       return new Date(iso).toLocaleString('zh-CN', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit',
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
       });
     };
 
-    // 构建时间轴（含 closed，避免状态未命中导致时间轴全灰）
     const buildTimeline = (t) => {
       const nodes = [];
       const statusOrder = ['pending', 'processing', 'dispatched', 'completed', 'closed'];
       const eventNames  = { pending: '提交申请', processing: '开始处理', dispatched: '已转交联通', completed: '处理完成', closed: '工单关闭' };
-
       const currentIdx = statusOrder.indexOf(t.status);
-
       statusOrder.forEach((s, i) => {
         let cls = 'pending-node';
         if (currentIdx >= 0) {
@@ -378,11 +236,9 @@ createApp({
         if ((s === 'completed' || s === 'closed') && t.completed_at) time = formatDate(t.completed_at);
         nodes.push({ class: cls, time, event: eventNames[s] });
       });
-
       return nodes;
     };
 
-    // 复制工单号
     const copyNo = (no) => {
       const done = () => vant.showToast({ message: '工单号已复制', icon: 'success' });
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -395,18 +251,11 @@ createApp({
         ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
         document.body.appendChild(ta); ta.select(); document.execCommand('copy');
         document.body.removeChild(ta); done();
-      } catch (e) {
-        vant.showToast({ message: '复制失败，请手动长按', icon: 'fail' });
-      }
+      } catch (e) { vant.showToast({ message: '复制失败，请手动长按', icon: 'fail' }); }
     };
 
-    const goBack = () => {
-      window.location.href = './index.html';
-    };
-
-    const goAdmin = () => {
-      window.location.href = './admin.html';
-    };
+    const goBack = () => { window.location.href = './index.html'; };
+    const goAdmin = () => { window.location.href = './admin.html'; };
 
     return {
       queryPhone, queryTicketNo, loading, queried, tickets,
