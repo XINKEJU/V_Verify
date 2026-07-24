@@ -817,23 +817,23 @@ createApp({
           }
         }
 
-        // 2. 写入工单（照片路径一并入库，少一次 RPC 往返）
-        const dbPayload = {
-          ticket_no:          ticketNo,
-          phone:              form.value.phone,
-          name:               form.value.name,
-          id_card:            form.value.idCard,
-          student_no:         form.value.studentNo,
-          service_type:       form.value.serviceType,
-          description:        form.value.description,
-          package:            form.value.package || null,
-          id_card_front_url:  frontPath,
-          id_card_back_url:   backPath,
-          email:              form.value.emailNotify ? form.value.email : null,
-          status:             'pending',
-        };
-
-        const { error: dbErr } = await sb.from('tickets').insert([dbPayload]);
+        // 2. 写入工单：统一走 submit_ticket 存储过程（SECURITY DEFINER）
+        //    由数据库所有者直写，彻底绕开 anon INSERT 策略的 PostgREST 缓存问题，
+        //    并内置服务端校验、频率限制与工单号去重（详见 supabase/submit_ticket_rpc.sql）。
+        const { error: dbErr } = await sb.rpc('submit_ticket', {
+          p_ticket_no:    ticketNo,
+          p_phone:        form.value.phone,
+          p_name:         form.value.name,
+          p_id_card:      form.value.idCard,
+          p_student_no:   form.value.studentNo,
+          p_service_type: form.value.serviceType,
+          p_description:  form.value.description,
+          p_package:      form.value.package || null,
+          p_email:        form.value.emailNotify ? form.value.email : null,
+          p_front:        frontPath || null,
+          p_back:         backPath || null,
+          p_throttle:     true,
+        });
         if (dbErr) throw dbErr;
 
         clearDraft();
@@ -842,9 +842,13 @@ createApp({
         window.scrollTo(0, 0);
       } catch (err) {
         console.error('提交失败:', err);
+        const raw = String(err.message || '');
         let msg = '提交失败，请稍后重试';
-        if (err.message?.includes('Supabase SDK')) msg = '系统初始化失败，请刷新重试';
-        else if (err.message && /violates|row-level security|permission denied/i.test(err.message)) msg = '提交被拒绝，请联系管理员';
+        if (raw.includes('Supabase SDK')) msg = '系统初始化失败，请刷新重试';
+        else if (/invalid_phone|invalid_name|invalid_service_type|invalid_description/.test(raw)) msg = '提交信息校验未通过，请检查后重试';
+        else if (/too_frequent/.test(raw)) msg = '操作过于频繁，请稍后再试';
+        else if (/duplicate_ticket_no/.test(raw)) msg = '工单号重复，请重新提交';
+        else if (/submit_ticket|function .* does not exist/.test(raw)) msg = '提交服务暂未就绪，请联系管理员执行数据库升级';
         vant.showToast({ message: msg, icon: 'fail', duration: 3000 });
       } finally {
         submitting.value = false;
@@ -901,7 +905,7 @@ createApp({
       serviceTypeLabel, selectedPackageLabel, maskedPhone, needsIdCard,
       goQuery, goAdmin,
       nextStep, prevStep, triggerUpload, handleFileChange,
-      submitForm, onPackageConfirm, goQuery, resetForm, clearDraft,
+      submitForm, onPackageConfirm, resetForm, clearDraft,
     };
   },
 }).use(vant).mount('#app');

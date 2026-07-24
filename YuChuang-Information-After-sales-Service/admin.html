@@ -407,15 +407,22 @@ createApp({
             vant.showToast({ message: '身份证照片上传失败，工单仍会创建', icon: 'fail', duration: 3500 });
           }
         }
-        const payload = {
-          ticket_no: ticketNo, phone: form.phone, name: form.name,
-          id_card: form.idCard || null, student_no: form.studentNo || null,
-          service_type: form.serviceType, description: form.description,
-          package: form.serviceType === 'package_change' ? (form.package || null) : null,
-          id_card_front_url: f, id_card_back_url: b,
-          email: null, status: 'pending',
-        };
-        const { error } = await sb.from('tickets').insert([payload]);
+        // 改为调用 submit_ticket 存储过程（SECURITY DEFINER，绕开 RLS 缓存问题；
+        // 管理员代客提交传 p_throttle=false 跳过频率限制，且 id_card/student_no 可选）。
+        const { error } = await sb.rpc('submit_ticket', {
+          p_ticket_no:    ticketNo,
+          p_phone:        form.phone,
+          p_name:         form.name,
+          p_id_card:      form.idCard || null,
+          p_student_no:   form.studentNo || null,
+          p_service_type: form.serviceType,
+          p_description:  form.description,
+          p_package:      form.serviceType === 'package_change' ? (form.package || null) : null,
+          p_email:        null,
+          p_front:        f || null,
+          p_back:         b || null,
+          p_throttle:     false,
+        });
         if (error) throw error;
         vant.showToast({ message: '工单已创建 ' + ticketNo, icon: 'success' });
         resetAdmin();
